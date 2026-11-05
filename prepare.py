@@ -110,7 +110,9 @@ def prepare_dataset(config, force=False):
     held_out = dataset[settings["heldout_split"]].train_test_split(
         test_size=settings["test_ratio"], seed=settings["seed"])
     splits = {
-        "train": dataset[settings["train_split"]],
+        "train": dataset[settings["train_split"]].shuffle(
+    seed=settings["seed"]
+),
         "val": held_out["train"],
         "test": held_out["test"],
     }
