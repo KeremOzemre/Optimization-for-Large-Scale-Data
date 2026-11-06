@@ -1,0 +1,46 @@
+experiment:
+  name: small_data50
+  seed: 42
+  output_dir: runs/small_data50
+data:
+  dataset: roneneldan/TinyStories
+  train_split: train
+  heldout_split: validation
+  test_ratio: 0.2
+  train_stories: 1059860
+  validation_stories: null
+  test_stories: null
+  cache_dir: data/tinystories/data50
+tokenizer:
+  name: gpt2
+model:
+  layers: 4
+  width: 256
+  heads: 4
+  context_length: 256
+  dropout: 0.1
+training:
+  device: cuda
+  precision: bfloat16
+  time_limit_seconds: 3600
+  microbatch_size: 16
+  gradient_accumulation_steps: 1
+  log_interval_steps: 10
+optimizer:
+  learning_rate: 0.0003
+  weight_decay: 0.1
+  betas:
+  - 0.9
+  - 0.95
+  gradient_clip: 1.0
+schedule:
+  warmup_fraction: 0.02
+  min_lr_ratio: 0.1
+evaluation:
+  interval_seconds: 300
+  batches: 16
+generation:
+  prompt: Once upon a time
+  max_new_tokens: 100
+  temperature: 0.8
+  top_k: 40
