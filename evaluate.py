@@ -1,5 +1,6 @@
 """Evaluate a trained checkpoint on the untouched TinyStories test split."""
 
+import json
 from pathlib import Path
 
 from train import (evaluate_model, fixed_batches, load_checkpoint_model,
@@ -27,6 +28,12 @@ def evaluate_checkpoint(settings, checkpoint_path):
                                               block_size, device, precision)
     print(f"Test loss: {loss:.4f}; perplexity: {perplexity:.2f}; "
           f"evaluated tokens: {count:,}")
+    # Persist next to the checkpoint so analyze.py can pick up test numbers.
+    results = {"test_loss": round(float(loss), 6),
+               "test_perplexity": round(float(perplexity), 6),
+               "evaluated_tokens": int(count)}
+    (Path(checkpoint_path).parent / "test_results.json").write_text(
+        json.dumps(results, indent=2) + "\n")
     return loss, perplexity
 
 
