@@ -147,6 +147,20 @@ spans** — the `xl` winner maintains one consistent plot and characters across 
 paragraph, whereas `small` more often loops ("painted a dog, and a dog") or drops a
 thread.
 
+### 5.5 Estimating the compute-optimal size
+
+Using only the trained runs, we estimate each run's training compute with the
+standard approximation **C ≈ 6ND** (N = parameters, D = tokens processed). Fitting a
+parabola to the best validation loss per size in log₁₀(parameters)
+(`compute_optimal_fit.png`) puts the minimum — the compute-optimal size for a 1-hour
+budget on this hardware — at **N\* ≈ 130M**, essentially coinciding with the
+empirical winner `xl` (124M). The loss-vs-compute view (`loss_vs_compute.png`) adds a
+secondary efficiency point: even though every run used the same wall-clock hour, the
+*delivered* compute grows with size (~9×10¹⁶ FLOPs for `small` up to ~2.2×10¹⁷ for
+`xxl`) because the smallest models underutilise the GPU. So `small` is doubly
+penalised — less capacity *and* less compute extracted from the same hour. (The fit
+uses five points and is indicative, not precise.)
+
 ## 6. Discussion
 
 The winner wins because it sits at the compute-optimal point for this budget: large

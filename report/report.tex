@@ -244,6 +244,33 @@ characters across a full paragraph, whereas \texttt{small} more often loops
 (``painted a dog, and a dog'') or drops a thread. Qualitative quality thus
 supplements but does not replace the held-out metrics.
 
+\subsection{Estimating the compute-optimal size}
+Using only the trained runs, we estimate each run's training compute with the
+standard approximation $C \approx 6ND$ ($N$ parameters, $D$ tokens processed).
+Taking the best validation loss per size and fitting a parabola in
+$\log_{10}(\text{parameters})$ (Fig.~\ref{fig:optfit}, left) places the minimum ---
+the compute-optimal size for a one-hour budget on this hardware --- at
+$N^\star \approx 130$M parameters, essentially coinciding with our empirical winner
+\texttt{xl} (124M). The loss--compute view (Fig.~\ref{fig:optfit}, right) exposes a
+secondary efficiency effect: although every run used the same wall-clock hour, the
+\emph{delivered} compute grows with size ($\approx 9\times10^{16}$ FLOPs for
+\texttt{small} up to $\approx 2.2\times10^{17}$ for \texttt{xxl}), because the
+smallest models underutilise the GPU. \texttt{small} is therefore doubly penalised:
+it both lacks capacity and extracts less compute from the same hour.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.49\linewidth]{figures/compute_optimal_fit.png}
+  \includegraphics[width=0.49\linewidth]{figures/loss_vs_compute.png}
+  \caption{Left: best validation loss per size vs.\ parameters, with a quadratic fit
+  in log-parameters whose vertex estimates the compute-optimal size
+  ($N^\star\approx130$M) for the one-hour budget --- within noise of the empirical
+  winner \texttt{xl}. Right: loss vs.\ estimated compute $C\approx6ND$; the smallest
+  models deliver the least compute despite the identical wall-clock budget. The
+  fit uses five points and is indicative rather than precise.}
+  \label{fig:optfit}
+\end{figure}
+
 \section{Discussion}
 The winner wins because it sits at the compute-optimal point for this budget: large
 enough to have the capacity the smaller models lack, small enough to still see
