@@ -1,147 +1,272 @@
 % DSA4212 - Optimisation for Large-Scale Data-Driven Inference
-% Small-LLM challenge report. Paste into Overleaf (pdfLaTeX).
-% Figures come from analyze.py (analysis/*.png); upload them to Overleaf.
+% Small-LLM challenge report. Compiles with pdfLaTeX (no siunitx needed).
+% Figures are in report/figures/ (copied from analysis/ by analyze.py).
 \documentclass[11pt]{article}
 
 \usepackage[margin=1in]{geometry}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{amsmath}
-\usepackage{siunitx}
 \usepackage{hyperref}
 \usepackage{caption}
 
-\title{Training a small GPT on TinyStories under a one-hour budget}
-\author{Steffany \and Kerem \and Tonio \and [name]\\ \small DSA4212, National University of Singapore}
+\title{Training a small GPT on TinyStories under a one-hour budget:\\
+a compute-optimal sweet spot}
+\author{Steffany Lara \and Kerem Ozemre \and Tonio Kowalke \and Ahmed Haj Hassine\\
+  \small DSA4212, National University of Singapore}
 \date{\today}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-% TODO (write last): 3-4 sentences. Budget, what we varied, the winning config,
-% and the single most important trade-off we found.
+Under a fixed one-hour, from-scratch training budget on identical hardware, we
+train 20 nanoGPT language models on TinyStories: five model sizes (16--253M
+parameters) crossed with four training-data fractions (25/50/75/100\% of the
+training split). Holding the tokenizer, optimizer, schedule, context length, and
+effective batch fixed, we find a clear compute-optimal sweet spot: performance
+improves steeply from \texttt{small} to \texttt{xl} ($\approx$124M parameters) and
+then \emph{reverses} at \texttt{xxl} ($\approx$253M), because the largest model is
+so slow that it consumes roughly half as many tokens in the hour and stays
+undertrained. The data fraction is almost irrelevant: no run exhausts even 25\% of
+the split within the budget, so these runs are compute-bound, not data-bound.
+Selecting by validation loss gives \texttt{xl\_data50} (val loss 1.5025, perplexity
+4.49); on the held-out test split it reaches loss 1.4846, perplexity 4.41, and
+0.524 bits per byte.
 \end{abstract}
 
 \section{Compute budget declaration}
-% TODO: one short paragraph.
-\begin{itemize}
-  \item \textbf{Budget:} one hour (\SI{3600}{\second}) of in-loop training wall-clock
-        \emph{per model}, on identical hardware for every run. Preparation, final
-        validation, and checkpointing are outside the timed loop.
-  \item \textbf{Hardware:} [GPU / node; from \texttt{run\_config.json} $\to$
-        \texttt{runtime.hardware}].
-  \item \textbf{From scratch:} random weights (nanoGPT init); no pretrained weights,
-        embeddings, or tokenizer fine-tuning.
-\end{itemize}
+Every model is trained from \emph{random weights} (nanoGPT initialisation; no
+pretrained weights, embeddings, or tokenizer fine-tuning) for exactly one hour
+(3600\,s) of in-loop training wall-clock \emph{per model}. Data preparation, the
+final validation pass, and checkpointing happen outside the timed loop. All 20 runs
+use the same hardware: a single \textbf{NVIDIA H100 NVL MIG 3g.47gb} slice in
+\texttt{bfloat16}. Equal wall-clock does \emph{not} imply equal token exposure, and
+quantifying that gap is central to our result (\S\ref{sec:results}).
 
 \section{Research question}
-We ask: \emph{which model size and training-data fraction gives the best
+We ask: \emph{which model size and training-data fraction give the best
 language-modeling performance under a fixed one-hour budget on identical
-hardware?} We hold the tokenizer, optimizer, schedule, context length, and batch
-settings fixed and vary only (a) model size and (b) the fraction of the training
-split used.
+hardware?} We hold the tokenizer, optimizer, schedule, context length, and
+effective batch size fixed and vary only (a)~model size and (b)~the fraction of
+the training split used.
 
 \section{Experimental setup}
 \begin{itemize}
   \item \textbf{Data:} \texttt{roneneldan/TinyStories}. Official train split for
-        training; official validation split divided 80/20 into validation/test at the
-        story level (seed 42). Test used only for the final comparison
-        (\S\ref{sec:test}).
-  \item \textbf{Tokenizer:} GPT-2 (\texttt{tiktoken}), vocab \num{50257}. Because the
-        tokenizer is fixed, per-token loss and perplexity are directly comparable
-        across all our runs.
-  \item \textbf{Model:} nanoGPT GPT, tied embeddings, causal attention, dropout 0.
+        training; the official validation split is divided 80/20 into
+        validation/test at the story level (seed 42). The test split is used
+        \emph{only} for the final comparison (\S\ref{sec:test}).
+  \item \textbf{Tokenizer:} GPT-2 (\texttt{tiktoken}), vocabulary 50{,}257, with an
+        end-of-text token appended to every story. Because the tokenizer is fixed,
+        per-token cross-entropy and perplexity are directly comparable across all
+        our runs.
+  \item \textbf{Model:} nanoGPT GPT with tied input/output embeddings, causal
+        self-attention, context length 256, and dropout 0.1.
 \end{itemize}
 
 \begin{table}[h]
   \centering
-  \caption{Model sizes compared.}
-  \begin{tabular}{lrrrr}
+  \caption{The five model sizes. Width is divisible by the head count; the context
+  length (256) and dropout (0.1) are shared. Microbatch $\times$ accumulation is
+  held at an \emph{effective batch of 16 sequences} (4096 tokens) per optimizer
+  step for every size.}
+  \label{tab:sizes}
+  \begin{tabular}{lrrrrr}
     \toprule
-    Size & Layers & Width & Heads & Params (M) \\
+    Size & Layers & Width & Heads & Params (M) & Microbatch $\times$ accum. \\
     \midrule
-    small  & 4 & 256 & 4 & [fill] \\
-    medium & 6 & 384 & 6 & [fill] \\
-    large  & 8 & 512 & 8 & [fill] \\
+    \texttt{small}  &  4 &  256 &  4 &  16.08 & $16 \times 1$ \\
+    \texttt{medium} &  6 &  384 &  6 &  30.02 & $16 \times 1$ \\
+    \texttt{large}  &  8 &  512 &  8 &  51.04 & $16 \times 1$ \\
+    \texttt{xl}     & 12 &  768 & 12 & 123.75 & $\phantom{0}8 \times 2$ \\
+    \texttt{xxl}    & 16 & 1024 & 16 & 253.09 & $\phantom{0}4 \times 4$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\noindent\textbf{Data fractions:} 25 / 50 / 75 / \SI{100}{\percent} of the training
-split, giving a $3\times4$ grid of 12 runs. \textbf{Optimizer/schedule:} AdamW
-(lr \num{3e-4}, wd 0.1, betas 0.9/0.95, clip 1.0), time-based \SI{2}{\percent} warmup
-then cosine decay to \SI{10}{\percent} of peak. Context 256, microbatch 16,
-accumulation 1.
+\noindent\textbf{Data fractions:} 25/50/75/100\% of the training split, giving a
+$5\times4$ grid of 20 runs. \textbf{Optimizer/schedule:} AdamW (lr $3\times10^{-4}$,
+weight decay 0.1, betas 0.9/0.95, gradient clip 1.0), with a time-based 2\% warmup
+then cosine decay to 10\% of the peak learning rate.
 
 \section{Methodology and reproducibility}
-% TODO: tighten once the runs are done.
 \begin{enumerate}
-  \item \texttt{python run.py prepare --config configs/default.yaml} builds the token cache.
-  \item \texttt{python create\_experiments.py} generates the 12 configs.
-  \item Each config trained with \texttt{python run.py train --config \ldots}; outputs in \texttt{results/<name>/}.
-  \item Model selected by \emph{validation} loss; only then evaluated on \emph{test}.
-  \item \texttt{python analyze.py} aggregates \texttt{results/*/} into \texttt{analysis/}.
+  \item \texttt{python run.py prepare --config configs/experiments/<name>.yaml}
+        builds (or reuses) the token cache for the requested data fraction.
+  \item \texttt{python create\_experiments.py} generates the 20 configs under
+        \texttt{configs/experiments/} from \texttt{configs/default.yaml}.
+  \item Each config is trained with
+        \texttt{python run.py train --config \ldots}; per-run outputs
+        (\texttt{run\_config.json}, \texttt{metrics.csv}, \texttt{checkpoint.pt})
+        land in \texttt{results/<name>/}. All checkpoints and logs are mirrored to
+        the Hugging Face Hub at \texttt{dsa4212-tinystories/tinystories-nanogpt}.
+  \item The model is selected by \emph{validation} loss; only the selected model is
+        then evaluated on \emph{test}.
+  \item \texttt{python eval\_hf.py} downloads every checkpoint and scores the full
+        test split; \texttt{python analyze.py --runs-dir results} aggregates all
+        runs into \texttt{analysis/} (tables and the figures reproduced below).
 \end{enumerate}
 
-\section{Results}
-% TODO: paste analysis/summary_table.md converted to LaTeX (or export summary.csv).
+\section{Results}\label{sec:results}
+Table~\ref{tab:results} lists all 20 runs sorted by final validation loss (the
+selection metric). Three patterns stand out, visualised in
+Figures~\ref{fig:curves}--\ref{fig:tension}.
+
 \begin{table}[h]
   \centering
-  \caption{All runs, sorted by final validation loss. (Paste from \texttt{analysis/summary\_table.md}.)}
-  \begin{tabular}{llrrrrr}
+  \caption{All 20 runs, sorted by final validation loss (the selection metric).
+  ``Tokens'' is the number of training tokens actually processed inside the
+  one-hour budget. Test numbers are reported here for completeness but were
+  \emph{not} used for selection (\S\ref{sec:test}).}
+  \label{tab:results}
+  \small
+  \begin{tabular}{lrrrrrr}
     \toprule
-    Run & Size & Data\% & Params (M) & Tokens & Val loss & Val ppl \\
+    Run & Params (M) & Data\% & Tokens (M) & Val loss & Val ppl & Test ppl \\
     \midrule
-    % ...
+    \texttt{xl\_data50}      & 123.75 &  50 & 273.9 & \textbf{1.5025} & \textbf{4.49} & 4.41 \\
+    \texttt{xl\_data100}     & 123.75 & 100 & 279.8 & 1.5068 & 4.51 & 4.40 \\
+    \texttt{xl\_data75}      & 123.75 &  75 & 269.1 & 1.5099 & 4.53 & 4.43 \\
+    \texttt{xxl\_data100}    & 253.09 & 100 & 143.7 & 1.5106 & 4.53 & 4.56 \\
+    \texttt{xl\_data25}      & 123.75 &  25 & 283.3 & 1.5118 & 4.54 & 4.45 \\
+    \texttt{xxl\_data75}     & 253.09 &  75 & 141.1 & 1.5125 & 4.54 & 4.59 \\
+    \texttt{xxl\_data50}     & 253.09 &  50 & 148.2 & 1.5155 & 4.55 & 4.56 \\
+    \texttt{xxl\_data25}     & 253.09 &  25 & 143.2 & 1.5233 & 4.59 & 4.61 \\
+    \texttt{large\_data100}  &  51.04 & 100 & 562.4 & 1.5460 & 4.69 & 4.66 \\
+    \texttt{large\_data75}   &  51.04 &  75 & 562.0 & 1.5466 & 4.70 & 4.67 \\
+    \texttt{large\_data50}   &  51.04 &  50 & 557.9 & 1.5479 & 4.70 & 4.69 \\
+    \texttt{large\_data25}   &  51.04 &  25 & 563.2 & 1.5509 & 4.72 & 4.70 \\
+    \texttt{medium\_data100} &  30.02 & 100 & 734.6 & 1.6444 & 5.18 & 5.16 \\
+    \texttt{medium\_data75}  &  30.02 &  75 & 738.3 & 1.6462 & 5.19 & 5.17 \\
+    \texttt{medium\_data50}  &  30.02 &  50 & 737.3 & 1.6527 & 5.22 & 5.20 \\
+    \texttt{medium\_data25}  &  30.02 &  25 & 719.1 & 1.6558 & 5.24 & 5.21 \\
+    \texttt{small\_data75}   &  16.08 &  75 & 940.8 & 1.8383 & 6.29 & 6.28 \\
+    \texttt{small\_data100}  &  16.08 & 100 & 984.3 & 1.8386 & 6.29 & 6.26 \\
+    \texttt{small\_data50}   &  16.08 &  50 & 985.5 & 1.8421 & 6.31 & 6.29 \\
+    \texttt{small\_data25}   &  16.08 &  25 & 972.0 & 1.8452 & 6.33 & 6.31 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.7\linewidth]{analysis/val_loss_curves.png}
-  \caption{Validation loss over training time. % TODO: which runs converge fastest?
-  }
+  \includegraphics[width=0.75\linewidth]{analysis/val_loss_curves.png}
+  \caption{Validation loss over training time. Smaller models fall fastest early
+  (they take many more steps per second) and plateau; \texttt{xl} and \texttt{xxl}
+  start higher but overtake the smaller models and are still visibly improving at
+  the one-hour mark, confirming they are compute-limited rather than converged.}
+  \label{fig:curves}
 \end{figure}
 
 \begin{figure}[h]
   \centering
   \includegraphics[width=0.49\linewidth]{analysis/val_loss_vs_params.png}
   \includegraphics[width=0.49\linewidth]{analysis/val_loss_vs_data.png}
-  \caption{Left: final validation loss vs.\ model size (per data fraction). Right:
-  vs.\ training-data fraction (per model size). % TODO: interpret.
-  }
+  \caption{Left: final validation loss vs.\ model size (one line per data
+  fraction). Loss drops steeply \texttt{small}$\to$\texttt{medium}$\to$\texttt{large}$\to$\texttt{xl},
+  then ticks \emph{up} at \texttt{xxl} --- a sweet spot near 124M parameters.
+  Right: loss vs.\ data fraction (one line per size). The lines are nearly flat;
+  within every size the four fractions differ by only $\sim\!0.01$ nats and not even
+  monotonically, i.e.\ the data fraction barely matters in this budget.}
+  \label{fig:sizedata}
 \end{figure}
 
 \begin{figure}[h]
   \centering
   \includegraphics[width=0.49\linewidth]{analysis/val_loss_vs_tokens.png}
   \includegraphics[width=0.49\linewidth]{analysis/throughput_vs_params.png}
-  \caption{The core tension: larger models see \emph{fewer} tokens in the same hour.
-  % TODO: quantify the trade-off.
-  }
+  \caption{The core tension. Right: throughput collapses with size --- from
+  $\sim$270k tokens/s for \texttt{small} to $\sim$40k tokens/s for \texttt{xxl}.
+  Left: consequently larger models process far fewer tokens in the same hour
+  ($\sim$985M for \texttt{small} vs $\sim$144M for \texttt{xxl}, a $\sim\!7\times$
+  gap), yet still reach lower loss per token --- until \texttt{xxl}, where too few
+  tokens finally outweigh the extra capacity.}
+  \label{fig:tension}
 \end{figure}
 
+\paragraph{(1) A compute-optimal sweet spot.} Bigger helps with sharply
+diminishing returns and then reverses: validation loss falls
+$1.84\to1.64\to1.55\to1.50$ from \texttt{small} to \texttt{xl}, but the best
+\texttt{xxl} run (1.5106) is \emph{worse} than the best \texttt{xl} run (1.5025).
+\texttt{xxl} has roughly twice the parameters of \texttt{xl} but runs at about half
+the throughput, so it sees only $\sim$144M tokens in the hour versus $\sim$274M for
+\texttt{xl} and stays undertrained (Fig.~\ref{fig:tension}).
+
+\paragraph{(2) Data fraction is nearly irrelevant.} Within each size the four data
+fractions differ by only $\sim\!0.01$ nats and not monotonically
+(Fig.~\ref{fig:sizedata}, right). The reason is in Table~\ref{tab:results}: no run
+processes more than $\sim$985M tokens, and even the 25\% subset of TinyStories
+contains far more tokens than that, so training (which samples windows with
+replacement) never exhausts even the smallest subset. These runs are
+\textbf{compute-bound, not data-bound}.
+
+\paragraph{(3) Test tracks validation.} The test ranking mirrors validation
+(Table~\ref{tab:results}); the full-split test losses are slightly \emph{lower}
+than validation because test is scored exhaustively over all 957{,}184 held-out
+tokens, whereas in-loop validation sampled a fixed number of windows.
+
 \subsection{Final test result}\label{sec:test}
-After selecting the best configuration on validation, its test loss/perplexity is
-[fill from \texttt{test\_results.json}]. Only this selected model is evaluated on test.
+Selecting purely on validation loss gives \texttt{xl\_data50} (val loss 1.5025,
+perplexity 4.49). Evaluated once on the untouched test split, it attains
+\textbf{test loss 1.4846, perplexity 4.41, and 0.5237 bits per byte}. We note the
+entire \texttt{xl} family is statistically indistinguishable (val 1.5025--1.5118;
+the 0.004 gap by which \texttt{data50} edges \texttt{data100} is within run-to-run
+noise), so the robust takeaway is \emph{``\texttt{xl} ($\approx$124M parameters) at
+any data fraction''} rather than 50\% specifically.
 
 \subsection{Qualitative evaluation}
-% TODO: short rubric scoring of generated stories (grammar, coherence, ends properly).
-% Supplements but does not replace the held-out metrics. See appendix for samples.
+Generated stories (temperature 0.8, top-$k$ 40; full samples in the appendix) agree
+with the metrics but compress the differences. Even \texttt{small} produces
+grammatical, on-topic TinyStories; the gains with size are in \emph{coherence over
+longer spans} --- the \texttt{xl} winner maintains a single consistent plot and
+characters across a full paragraph, whereas \texttt{small} more often loops
+(``painted a dog, and a dog'') or drops a thread. Qualitative quality thus
+supplements but does not replace the held-out metrics.
 
 \section{Discussion}
-% TODO: why did the winner win? compute-bound or data-bound? what would change with a
-% bigger budget? Limitations: windows sampled with replacement (no guaranteed epoch),
-% fixed recipe may not be optimal for every size.
+The winner wins because it sits at the compute-optimal point for this budget: large
+enough to have the capacity the smaller models lack, small enough to still see
+enough tokens in an hour to use that capacity. The experiment is firmly
+\emph{compute-bound}: throughput, not data availability, is the binding constraint,
+which is exactly why the data fraction barely moves the loss and why \texttt{xxl}
+underperforms \texttt{xl}. With a larger budget we would expect the curve in
+Fig.~\ref{fig:sizedata} (left) to keep bending right --- \texttt{xxl} (and beyond)
+should eventually overtake \texttt{xl} once given enough tokens to train on, and
+the data fraction would start to matter once a run can consume a full subset.
+\textbf{Limitations:} training samples windows with replacement, so one hour
+guarantees neither a full epoch nor unique coverage; the single shared recipe
+(learning rate, warmup, batch) is not separately tuned per size and may slightly
+favour some sizes; validation used sampled windows rather than the exhaustive
+test-time pass; and the TinyStories source revision is not pinned.
 
 \section{Conclusion}
-% TODO: one paragraph answering the research question with the winning config and the
-% single most important trade-off.
+Under a fixed one-hour, from-scratch budget on one H100 MIG slice, the best
+language model on TinyStories is \texttt{xl} ($\approx$124M parameters); selected on
+validation, \texttt{xl\_data50} reaches test perplexity 4.41 (0.524 bits/byte). The
+single most important trade-off is throughput versus capacity: because larger models
+process far fewer tokens in the same wall-clock time, ``bigger'' stops helping ---
+and then hurts --- well before the largest model we trained, while the amount of
+training data available makes almost no difference in this compute-bound regime.
 
 \appendix
 \section{Generated story samples}
-% TODO: a few outputs per model from `python run.py generate`.
+The complete set of samples for all 20 runs (five prompts each) is in
+\texttt{analysis/generations\_all.md}. As an illustration, both models continue
+``\emph{Once upon a time}'' coherently, but the \texttt{xl} winner sustains a
+longer, more consistent narrative:
+
+\paragraph{\texttt{small\_data25}.} \emph{``Once upon a time, there was a little
+girl named Lily. Lily loved to play with her toys\ldots She painted a picture of a
+flower and a house\ldots Later that day, Lily's mom asked her to help. Lily was
+happy to help and started to decorate the room with pretty flowers.''} (The thread
+loops back on itself.)
+
+\paragraph{\texttt{xl\_data50} (selected).} \emph{``Once upon a time, there was a
+little girl named Lily. Lily loved to play with her toys, especially her teddy
+bear. One day, Lily's mommy asked her to help decorate the house for a party\ldots
+`Mommy, can I carry my teddy bear?' she asked\ldots They arrived at the living room
+and Lily's mommy gave her a big box of presents.''} (One consistent, advancing
+plot.)
 
 \end{document}
