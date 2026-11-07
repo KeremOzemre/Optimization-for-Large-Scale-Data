@@ -19,6 +19,16 @@ a compute-optimal sweet spot}
 \begin{document}
 \maketitle
 
+\begin{center}\small
+\textbf{Group members:}
+Steffany Lara (A0350565H),\quad
+Kerem Ozemre (A0\,[fill]),\quad
+Tonio Kowalke (A0\,[fill]),\quad
+Ahmed Haj Hassine (A0\,[fill])\\[3pt]
+\textbf{Code repository:} \url{https://github.com/KeremOzemre/Optimization-for-Large-Scale-Data}
+\end{center}
+\vspace{4pt}
+
 \begin{abstract}
 Under a fixed one-hour, from-scratch training budget on identical hardware, we
 train 20 nanoGPT language models on TinyStories: five model sizes (16--253M
@@ -61,8 +71,15 @@ the training split used.
         end-of-text token appended to every story. Because the tokenizer is fixed,
         per-token cross-entropy and perplexity are directly comparable across all
         our runs.
-  \item \textbf{Model:} nanoGPT GPT with tied input/output embeddings, causal
-        self-attention, context length 256, and dropout 0.1.
+  \item \textbf{Model:} nanoGPT~\cite{karpathy} GPT with tied input/output
+        embeddings, causal self-attention, context length 256, and dropout 0.1.
+  \item \textbf{Evaluation objective:} held-out cross-entropy on the test split,
+        reported also as perplexity ($\exp$ of the loss) and bits per byte. These
+        are appropriate because cross-entropy is exactly the language-modeling
+        training objective measured on unseen text, perplexity is its interpretable
+        form, and bits per byte normalises across tokenizers so our numbers are
+        comparable to other work~\cite{eldan2023}. The story-level 80/20 split
+        (seed 42) prevents any story leaking between validation and test.
 \end{itemize}
 
 \begin{table}[h]
@@ -191,7 +208,10 @@ $1.84\to1.64\to1.55\to1.50$ from \texttt{small} to \texttt{xl}, but the best
 \texttt{xxl} run (1.5106) is \emph{worse} than the best \texttt{xl} run (1.5025).
 \texttt{xxl} has roughly twice the parameters of \texttt{xl} but runs at about half
 the throughput, so it sees only $\sim$144M tokens in the hour versus $\sim$274M for
-\texttt{xl} and stays undertrained (Fig.~\ref{fig:tension}).
+\texttt{xl} and stays undertrained (Fig.~\ref{fig:tension}). This is the
+compute-optimal trade-off of Hoffmann et al.~\cite{hoffmann2022}: under a fixed
+compute budget there is an optimal model size, and growing past it wastes the
+budget on parameters that never see enough tokens.
 
 \paragraph{(2) Data fraction is nearly irrelevant.} Within each size the four data
 fractions differ by only $\sim\!0.01$ nats and not monotonically
@@ -248,6 +268,16 @@ single most important trade-off is throughput versus capacity: because larger mo
 process far fewer tokens in the same wall-clock time, ``bigger'' stops helping ---
 and then hurts --- well before the largest model we trained, while the amount of
 training data available makes almost no difference in this compute-bound regime.
+
+\begin{thebibliography}{9}
+\bibitem{eldan2023} R.~Eldan and Y.~Li. \emph{TinyStories: How Small Can Language
+  Models Be and Still Speak Coherent English?} arXiv:2305.07759, 2023.
+\bibitem{hoffmann2022} J.~Hoffmann et al. \emph{Training Compute-Optimal Large
+  Language Models} (Chinchilla). arXiv:2203.15556, 2022.
+\bibitem{karpathy} A.~Karpathy. \emph{nanoGPT}.
+  \url{https://github.com/karpathy/nanoGPT}, commit
+  \texttt{3adf61e}, 2023.
+\end{thebibliography}
 
 \appendix
 \section{Generated story samples}
