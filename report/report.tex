@@ -19,6 +19,9 @@
     citecolor = blue,
     anchorcolor = blue}
 \urlstyle{same}
+\IfFileExists{microtype.sty}{\usepackage{microtype}}{} % tighter line breaking
+\setlength{\emergencystretch}{3em} % avoid lines running into the margin
+\Urlmuskip=0mu plus 1mu\relax      % let URLs flex so they do not overrun
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \title{Training a small GPT on TinyStories under a one-hour budget:
@@ -37,7 +40,8 @@ a compute-optimal sweet spot}
 \item Haj Hassine Ahmed Ben Abdellaziz (Ahmed Haj Hassine), A0[fill], [NUS email]
 \end{enumerate}
 
-{\bf Github Repository:} \url{https://github.com/KeremOzemre/Optimization-for-Large-Scale-Data}
+{\bf Github Repository:}
+\href{https://github.com/KeremOzemre/Optimization-for-Large-Scale-Data}{github.com/KeremOzemre/\allowbreak Optimization-for-Large-Scale-Data}
 
 \begin{abstract}
 We trained 20 nanoGPT language models on TinyStories from random weights, each for
@@ -117,21 +121,21 @@ $3\times10^{-4}$, weight decay 0.1, betas 0.9/0.95, gradient clip 1.0), with a
 time-based 2\% warmup and then cosine decay to 10\% of the peak learning rate.
 
 \section{Methodology and reproducibility}
+The exact commands are in the repository README; the pipeline is five steps.
 \begin{enumerate}
-  \item \texttt{python run.py prepare --config configs/experiments/<name>.yaml}
-        builds (or reuses) the token cache for the requested data fraction.
-  \item \texttt{python create\_experiments.py} generates the configs under
-        \texttt{configs/experiments/} from \texttt{configs/default.yaml}.
-  \item Each config trains with \texttt{python run.py train --config \ldots}; per-run
-        outputs (\texttt{run\_config.json}, \texttt{metrics.csv},
-        \texttt{checkpoint.pt}) go to \texttt{results/<name>/}. All checkpoints and
-        logs are mirrored to the Hugging Face Hub at
-        \texttt{dsa4212-tinystories/tinystories-nanogpt}.
+  \item \texttt{run.py prepare} builds (or reuses) the token cache for a given data
+        fraction.
+  \item \texttt{create\_experiments.py} writes the per-run configs under
+        \texttt{configs/experiments/} from the baseline YAML.
+  \item \texttt{run.py train} trains one config; its outputs
+        (\texttt{run\_config.json}, \texttt{metrics.csv}, \texttt{checkpoint.pt}) land
+        in \texttt{results/}. Checkpoints and logs are mirrored to the Hugging Face
+        Hub (\texttt{dsa4212-tinystories}).
   \item We pick the model on \emph{validation} loss, and only then score the chosen
         one on \emph{test}.
-  \item \texttt{python eval\_hf.py} downloads every checkpoint and scores the full
-        test split; \texttt{python analyze.py --runs-dir results} aggregates all runs
-        into \texttt{analysis/} (the tables and figures below).
+  \item \texttt{eval\_hf.py} downloads every checkpoint and scores the full test
+        split; \texttt{analyze.py} then aggregates all runs into \texttt{analysis/}
+        (the tables and figures below).
 \end{enumerate}
 
 \section{Results}\label{sec:results}
@@ -306,7 +310,7 @@ allowed to touch makes almost no difference once you are this compute-bound.
 \appendix
 \section{Generated story samples}
 The full set of samples for all 20 runs (five prompts each) lives in
-\texttt{analysis/generations\_all.md}. As one example, both models continue
+\texttt{analysis/\allowbreak generations\_all.md}. As one example, both models continue
 ``\emph{Once upon a time}'' fluently, but the \texttt{xl} winner holds a longer, more
 consistent story:
 
