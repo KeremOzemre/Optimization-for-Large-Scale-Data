@@ -1,0 +1,12 @@
+{
+  "run": "medium_data100",
+  "test_loss": 1.641483,
+  "test_perplexity": 5.1628,
+  "test_bits_per_byte": 0.57909,
+  "evaluated_tokens": 957184,
+  "evaluated_bytes": 3914357,
+  "parameter_count": 30018816,
+  "tokens_processed": 734642176,
+  "seed": 42,
+  "protocol": "non-overlapping 256-token windows over the whole test split"
+}

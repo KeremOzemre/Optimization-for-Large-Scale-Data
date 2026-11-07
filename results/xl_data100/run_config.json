@@ -1,0 +1,70 @@
+{
+  "experiment": {
+    "name": "xl_data100",
+    "seed": 42,
+    "output_dir": "runs/xl_data100"
+  },
+  "data": {
+    "dataset": "roneneldan/TinyStories",
+    "train_split": "train",
+    "heldout_split": "validation",
+    "test_ratio": 0.2,
+    "train_stories": null,
+    "validation_stories": null,
+    "test_stories": null,
+    "cache_dir": "data/tinystories/data100"
+  },
+  "tokenizer": {
+    "name": "gpt2"
+  },
+  "model": {
+    "layers": 12,
+    "width": 768,
+    "heads": 12,
+    "context_length": 256,
+    "dropout": 0.1
+  },
+  "training": {
+    "device": "cuda",
+    "precision": "bfloat16",
+    "time_limit_seconds": 3600,
+    "microbatch_size": 8,
+    "gradient_accumulation_steps": 2,
+    "log_interval_steps": 10
+  },
+  "optimizer": {
+    "learning_rate": 0.0003,
+    "weight_decay": 0.1,
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "gradient_clip": 1.0
+  },
+  "schedule": {
+    "warmup_fraction": 0.02,
+    "min_lr_ratio": 0.1
+  },
+  "evaluation": {
+    "interval_seconds": 300,
+    "batches": 16
+  },
+  "generation": {
+    "prompt": "Once upon a time",
+    "max_new_tokens": 100,
+    "temperature": 0.8,
+    "top_k": 40
+  },
+  "runtime": {
+    "device": "cuda",
+    "hardware": "NVIDIA H100 NVL MIG 3g.47gb",
+    "precision": "bfloat16",
+    "vocab_size": 50257,
+    "parameter_count": 123747840,
+    "prepared_token_counts": {
+      "train": 473992236,
+      "val": 3808644,
+      "test": 957274
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "run": "xl_data75",
+  "test_loss": 1.489011,
+  "test_perplexity": 4.4327,
+  "test_bits_per_byte": 0.5253,
+  "evaluated_tokens": 957184,
+  "evaluated_bytes": 3914357,
+  "parameter_count": 123747840,
+  "tokens_processed": 269086720,
+  "seed": 42,
+  "protocol": "non-overlapping 256-token windows over the whole test split"
+}

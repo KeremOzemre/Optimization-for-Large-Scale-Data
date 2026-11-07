@@ -47,8 +47,9 @@ def parse_data_fraction(name, train_stories):
 
 def parse_size_label(name, param_count):
     """A short model-size label from the run name, else the parameter count in millions."""
-    for label in ("small", "medium", "large"):
-        if label in str(name):
+    # Longest labels first so "xxl" is not matched as "xl".
+    for label in ("xxl", "xl", "small", "medium", "large"):
+        if re.match(rf"{label}_", str(name)):
             return label
     if param_count:
         return f"{param_count / 1e6:.0f}M"
@@ -104,6 +105,7 @@ def load_run(run_dir):
         "steps": int(final.get("step", 0)),
         "test_loss": test.get("test_loss"),
         "test_perplexity": test.get("test_perplexity"),
+        "test_bits_per_byte": test.get("test_bits_per_byte"),
     }
 
     curve = metrics.assign(run=name)
@@ -155,7 +157,10 @@ def _scatter_grouped(summary, x, y, group, title, xlabel, ylabel, filename, out_
         print(f"  skip {filename}: no rows with {x}, {y}, {group}")
         return
     fig, ax = plt.subplots(figsize=(8, 5))
-    for key, g in plot_df.sort_values(x).groupby(group):
+    order = {"small": 0, "medium": 1, "large": 2, "xl": 3, "xxl": 4}
+    groups = sorted(plot_df.groupby(group), key=lambda kv: order.get(kv[0], kv[0]) if group == "size" else kv[0])
+    for key, g in groups:
+        g = g.sort_values(x)
         ax.plot(g[x], g[y], marker="o", label=f"{group}={key}")
     if logx:
         ax.set_xscale("log")
@@ -174,7 +179,7 @@ def write_report_table(summary, out_dir):
     columns = ["run", "size", "data_pct", "layers", "width", "heads",
                "params_millions", "tokens_processed", "steps",
                "tokens_per_second", "final_val_loss", "final_val_perplexity",
-               "test_loss", "test_perplexity"]
+               "test_loss", "test_perplexity", "test_bits_per_byte"]
     present = [c for c in columns if c in summary.columns]
     ordered = summary.sort_values("final_val_loss", na_position="last")[present]
     (out_dir / "summary_table.md").write_text(ordered.to_markdown(index=False) + "\n")
