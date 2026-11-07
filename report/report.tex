@@ -1,33 +1,43 @@
 % DSA4212 - Optimisation for Large-Scale Data-Driven Inference
-% Small-LLM challenge report. Compiles with pdfLaTeX (no siunitx needed).
-% Figures are in report/figures/ (copied from analysis/ by analyze.py).
-\documentclass[11pt]{article}
+% Small-LLM challenge report. Course Overleaf template (12pt, natbib, libertine).
+% Figures are in report/figures/; bibliography in report/references.bib.
+\documentclass[12pt]{article}
 
-\usepackage[margin=1in]{geometry}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%% YOU PROBABLY DON"T NEED TO CHANGE ANYTHING HERE %%%%%%%%%%%%%%%%%%%
+\usepackage[numbers,sort]{natbib}
+\usepackage{amsfonts, amsmath}
 \usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{amsmath}
+\usepackage{booktabs}   % for the results tables (\toprule etc.)
+\IfFileExists{libertine.sty}{\usepackage{libertine}}{} % template font (present on Overleaf)
+\usepackage{fullpage}
 \usepackage{hyperref}
-\usepackage{caption}
+\hypersetup{
+    colorlinks = true,
+    linkcolor = blue,
+    urlcolor  = blue,
+    citecolor = blue,
+    anchorcolor = blue}
+\urlstyle{same}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\title{Training a small GPT on TinyStories under a one-hour budget:\\
+\title{Training a small GPT on TinyStories under a one-hour budget:
 a compute-optimal sweet spot}
-\author{Steffany Lara \and Kerem Ozemre \and Tonio Kowalke \and Ahmed Haj Hassine\\
-  \small DSA4212, National University of Singapore}
 \date{\today}
 
 \begin{document}
+
 \maketitle
 
-\begin{center}\small
-\textbf{Group members:}
-Steffany Lara (A0350565H),\quad
-Kerem Ozemre (A0\,[fill]),\quad
-Tonio Kowalke (A0\,[fill]),\quad
-Ahmed Haj Hassine (A0\,[fill])\\[3pt]
-\textbf{Code repository:} \url{https://github.com/KeremOzemre/Optimization-for-Large-Scale-Data}
-\end{center}
-\vspace{4pt}
+{\bf Group Composition:}
+\begin{enumerate}
+\item Lara Muy Steffany Mishell (Steffany Lara), A0350565H, [NUS email]
+\item Kerem Ozemre, A0[fill], [NUS email]
+\item Kowalke Jeri Tonio Janek (Tonio Kowalke), A0[fill], [NUS email]
+\item Haj Hassine Ahmed Ben Abdellaziz (Ahmed Haj Hassine), A0[fill], [NUS email]
+\end{enumerate}
+
+{\bf Github Repository:} \url{https://github.com/KeremOzemre/Optimization-for-Large-Scale-Data}
 
 \begin{abstract}
 Under a fixed one-hour, from-scratch training budget on identical hardware, we
@@ -296,15 +306,8 @@ process far fewer tokens in the same wall-clock time, ``bigger'' stops helping -
 and then hurts --- well before the largest model we trained, while the amount of
 training data available makes almost no difference in this compute-bound regime.
 
-\begin{thebibliography}{9}
-\bibitem{eldan2023} R.~Eldan and Y.~Li. \emph{TinyStories: How Small Can Language
-  Models Be and Still Speak Coherent English?} arXiv:2305.07759, 2023.
-\bibitem{hoffmann2022} J.~Hoffmann et al. \emph{Training Compute-Optimal Large
-  Language Models} (Chinchilla). arXiv:2203.15556, 2022.
-\bibitem{karpathy} A.~Karpathy. \emph{nanoGPT}.
-  \url{https://github.com/karpathy/nanoGPT}, commit
-  \texttt{3adf61e}, 2023.
-\end{thebibliography}
+\bibliographystyle{plainnat}
+\bibliography{references}
 
 \appendix
 \section{Generated story samples}
