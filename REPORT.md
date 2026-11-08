@@ -161,6 +161,22 @@ secondary efficiency point: even though every run used the same wall-clock hour,
 penalised — less capacity *and* less compute extracted from the same hour. (The fit
 uses five points and is indicative, not precise.)
 
+### 5.6 Varying the budget and the context length
+
+Two follow-up experiments change the things the main grid held fixed.
+
+**Budget.** We reran `large`, `xl`, `xxl` at a 30-minute budget instead of an hour. The
+winner moves: at 30 min `large` (51M) leads with val loss 1.580, ahead of `xl` (1.633)
+and `xxl` (1.680), whereas at a full hour `xl` was best. Halving the clock pulls the
+best size down from 124M to 51M (`budget_sweep.png`), which is what the compute-optimal
+view predicts: fewer tokens to spend, so a smaller, faster model spends them better. We
+compare on validation loss here, since it is measured the same way for every run.
+
+**Context length.** Keeping `xl` and the one-hour budget, raising the context from 256
+to 512 tokens drops val loss from 1.5068 to 1.4555 (test perplexity 4.40 → 4.31), even
+though the longer-context run gets through fewer tokens (190M vs 280M). On TinyStories
+the extra context pays for itself.
+
 ## 6. Discussion
 
 The winner wins because it sits at the compute-optimal point for this budget: large

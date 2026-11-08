@@ -19,6 +19,9 @@
     citecolor = blue,
     anchorcolor = blue}
 \urlstyle{same}
+\IfFileExists{microtype.sty}{\usepackage{microtype}}{} % tighter line breaking
+\setlength{\emergencystretch}{3em} % avoid lines running into the margin
+\Urlmuskip=0mu plus 1mu\relax      % let URLs flex so they do not overrun
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \title{Training a small GPT on TinyStories under a one-hour budget:
@@ -37,7 +40,8 @@ a compute-optimal sweet spot}
 \item Haj Hassine Ahmed Ben Abdellaziz (Ahmed Haj Hassine), A0[fill], [NUS email]
 \end{enumerate}
 
-{\bf Github Repository:} \url{https://github.com/KeremOzemre/Optimization-for-Large-Scale-Data}
+{\bf Github Repository:}
+\href{https://github.com/KeremOzemre/Optimization-for-Large-Scale-Data}{github.com/KeremOzemre/\allowbreak Optimization-for-Large-Scale-Data}
 
 \begin{abstract}
 We trained 20 nanoGPT language models on TinyStories from random weights, each for
@@ -117,21 +121,21 @@ $3\times10^{-4}$, weight decay 0.1, betas 0.9/0.95, gradient clip 1.0), with a
 time-based 2\% warmup and then cosine decay to 10\% of the peak learning rate.
 
 \section{Methodology and reproducibility}
+The exact commands are in the repository README; the pipeline is five steps.
 \begin{enumerate}
-  \item \texttt{python run.py prepare --config configs/experiments/<name>.yaml}
-        builds (or reuses) the token cache for the requested data fraction.
-  \item \texttt{python create\_experiments.py} generates the configs under
-        \texttt{configs/experiments/} from \texttt{configs/default.yaml}.
-  \item Each config trains with \texttt{python run.py train --config \ldots}; per-run
-        outputs (\texttt{run\_config.json}, \texttt{metrics.csv},
-        \texttt{checkpoint.pt}) go to \texttt{results/<name>/}. All checkpoints and
-        logs are mirrored to the Hugging Face Hub at
-        \texttt{dsa4212-tinystories/tinystories-nanogpt}.
+  \item \texttt{run.py prepare} builds (or reuses) the token cache for a given data
+        fraction.
+  \item \texttt{create\_experiments.py} writes the per-run configs under
+        \texttt{configs/experiments/} from the baseline YAML.
+  \item \texttt{run.py train} trains one config; its outputs
+        (\texttt{run\_config.json}, \texttt{metrics.csv}, \texttt{checkpoint.pt}) land
+        in \texttt{results/}. Checkpoints and logs are mirrored to the Hugging Face
+        Hub (\texttt{dsa4212-tinystories}).
   \item We pick the model on \emph{validation} loss, and only then score the chosen
         one on \emph{test}.
-  \item \texttt{python eval\_hf.py} downloads every checkpoint and scores the full
-        test split; \texttt{python analyze.py --runs-dir results} aggregates all runs
-        into \texttt{analysis/} (the tables and figures below).
+  \item \texttt{eval\_hf.py} downloads every checkpoint and scores the full test
+        split; \texttt{analyze.py} then aggregates all runs into \texttt{analysis/}
+        (the tables and figures below).
 \end{enumerate}
 
 \section{Results}\label{sec:results}
@@ -276,6 +280,35 @@ loses twice over: less capacity, and less compute squeezed out of the same hour.
   \label{fig:optfit}
 \end{figure}
 
+\subsection{Varying the budget and the context length}
+The main grid holds two things fixed that are worth poking at: the one-hour budget
+and the 256-token context. We changed each on its own.
+
+\paragraph{Budget.} If the best size really comes out of the budget, then a smaller
+budget should want a smaller model. We reran \texttt{large}, \texttt{xl}, and
+\texttt{xxl} at 30 minutes instead of an hour. The winner moves. At 30 minutes
+\texttt{large} (51M) takes the lead with validation loss 1.580, ahead of \texttt{xl}
+(1.633) and \texttt{xxl} (1.680), whereas at a full hour \texttt{xl} was best
+(Fig.~\ref{fig:budget}). Halving the clock pulls the best size down from 124M to 51M,
+which is what the compute-optimal view predicts: fewer tokens to spend, so a smaller
+and faster model spends them better. We compare on validation loss here, since it is
+measured the same way for every run.
+
+\paragraph{Context length.} Keeping \texttt{xl} and the one-hour budget, we raised the
+context from 256 to 512 tokens. Validation loss falls from 1.5068 to 1.4555 (test
+perplexity from 4.40 to 4.31), even though the longer-context run gets through fewer
+tokens in the hour (190M against 280M). On TinyStories the extra context pays for
+itself.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.62\linewidth]{analysis/budget_sweep.png}
+  \caption{Best validation loss per size at two budgets. At one hour the minimum sits
+  at \texttt{xl} (124M); at 30 minutes it moves to \texttt{large} (51M). A tighter
+  budget prefers a smaller model.}
+  \label{fig:budget}
+\end{figure}
+
 \section{Discussion}
 The winner wins because it sits where capacity and tokens balance for this budget: big
 enough to hold what the smaller models cannot, small enough to still see enough tokens
@@ -285,7 +318,9 @@ fraction hardly moves the loss and why \texttt{xxl} lands below \texttt{xl}. Giv
 bigger budget and we would expect the left panel of Fig.~\ref{fig:sizedata} to keep
 bending to the right: \texttt{xxl} and larger should eventually pass \texttt{xl} once
 they get enough tokens, and the data fraction should start to bite once a run can
-actually finish a subset. A few caveats. Training samples windows with replacement, so
+actually finish a subset. The 30-minute runs show the mirror image: cut the budget
+and the best size has already dropped to \texttt{large} (Fig.~\ref{fig:budget}),
+and a longer context helps \texttt{xl} even though it costs tokens. A few caveats. Training samples windows with replacement, so
 an hour guarantees neither a full epoch nor unique coverage. The single shared recipe
 (learning rate, warmup, batch) is not tuned per size and may help some sizes more than
 others. Validation used sampled windows rather than the full test-time pass. And the
@@ -306,7 +341,7 @@ allowed to touch makes almost no difference once you are this compute-bound.
 \appendix
 \section{Generated story samples}
 The full set of samples for all 20 runs (five prompts each) lives in
-\texttt{analysis/generations\_all.md}. As one example, both models continue
+\texttt{analysis/\allowbreak generations\_all.md}. As one example, both models continue
 ``\emph{Once upon a time}'' fluently, but the \texttt{xl} winner holds a longer, more
 consistent story:
 
