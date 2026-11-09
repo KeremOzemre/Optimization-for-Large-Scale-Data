@@ -1,4 +1,4 @@
-"""Exploratory paired color-tracking probes; these are not a reasoning benchmark."""
+"""Balanced exploratory color-tracking probes; these are not a reasoning benchmark."""
 
 import argparse
 import csv
@@ -11,18 +11,57 @@ import torch
 from train import file_sha256, load_checkpoint_model, select_device
 
 
+PROTOCOL_VERSION = "color_tracking_v2_balanced"
+
+
 def probes():
     pairs = [("Lily", "boat", "ball"), ("Tom", "hat", "coat"), ("Mia", "box", "bag"),
              ("Ben", "car", "bike"), ("Anna", "cup", "plate"), ("Sam", "kite", "toy"),
              ("Lucy", "chair", "table"), ("Leo", "door", "gate"),
              ("Emma", "book", "pen"), ("Jack", "sock", "shoe")]
-    for i, (name, target, other) in enumerate(pairs):
-        for color, distractor in (("red", "blue"), ("blue", "red")):
-            # Both versions have the same words; the entity-color assignments swap.
-            prompt = (f"{name} had a {color} {target} and a {distractor} {other}. "
-                      f"{name} played outside with a friend. Later, the friend asked about the {target}. "
-                      f"{name} said that the color of the {target} was")
-            yield {"pair": i, "correct": color, "prompt": prompt}
+    for scenario, (name, object_a, object_b) in enumerate(pairs):
+        for color_a, color_b in (("red", "blue"), ("blue", "red")):
+            objects = {"a": object_a, "b": object_b}
+            colors = {"a": color_a, "b": color_b}
+            for first, second in (("a", "b"), ("b", "a")):
+                for queried_entity in ("a", "b"):
+                    # Balance all three factors: color assignment, mention order,
+                    # and queried object. Copying either color position scores 50%.
+                    queried_object = objects[queried_entity]
+                    prompt = (f"{name} had a {colors[first]} {objects[first]} and a "
+                              f"{colors[second]} {objects[second]}. "
+                              f"{name} played outside with a friend. Later, the friend asked "
+                              f"about the {queried_object}. {name} said that the color "
+                              f"of the {queried_object} was")
+                    yield {
+                        "scenario": scenario, "object_a": object_a, "object_b": object_b,
+                        "color_a": color_a, "color_b": color_b,
+                        "color_assignment": f"a_{color_a}_b_{color_b}",
+                        "mention_order": f"{first}_{second}",
+                        "queried_entity": queried_entity, "queried_object": queried_object,
+                        "query_position": 1 if queried_entity == first else 2,
+                        "correct": colors[queried_entity], "prompt": prompt,
+                    }
+
+
+def prediction_summary(rows):
+    """Require every balanced variant, rather than one favorable prompt per scenario."""
+    expected = {}
+    for probe in probes():
+        expected.setdefault(probe["scenario"], set()).add(
+            (probe["color_assignment"], probe["mention_order"], probe["queried_entity"]))
+    successful = 0
+    for scenario, variants in expected.items():
+        selected = [row for row in rows if row["scenario"] == scenario]
+        observed = {(row["color_assignment"], row["mention_order"], row["queried_entity"])
+                    for row in selected}
+        successful += (observed == variants and len(selected) == len(variants)
+                       and all(row["correct_prediction"] for row in selected))
+    return {
+        "accuracy": sum(row["correct_prediction"] for row in rows) / len(rows),
+        "prompts": len(rows), "scenarios": len(expected),
+        "scenarios_all_variants_correct": successful,
+    }
 
 
 def main():
@@ -58,11 +97,8 @@ def main():
                 model_rows.append({"checkpoint": str(path), **probe, "prediction": predicted,
                                    "correct_prediction": int(predicted == probe["correct"]),
                                    "logp_red": scores[0], "logp_blue": scores[1]})
-        pair_success = [all(row["correct_prediction"] for row in model_rows if row["pair"] == pair)
-                        for pair in range(10)]
         summaries.append({"checkpoint": str(path), "checkpoint_sha256": file_sha256(path),
-                          "accuracy": sum(row["correct_prediction"] for row in model_rows) / 20,
-                          "both_versions_correct": sum(pair_success), "pairs": 10})
+                          **prediction_summary(model_rows)})
         rows.extend(model_rows)
         del model
     with (out / "predictions.csv").open("w", newline="") as handle:
@@ -70,7 +106,8 @@ def main():
         writer.writeheader()
         writer.writerows(rows)
     (out / "summary.json").write_text(json.dumps({
-        "warning": "20 hand-written prompts, paired color swaps; exploratory, correlated, narrow task. A model can succeed on one version using a color preference. Both-version accuracy is the stronger check. No claim of general reasoning follows.",
+        "protocol": PROTOCOL_VERSION,
+        "warning": "80 hand-written prompts across 10 scenarios, with all 8 combinations of queried entity, mention order, and color assignment. Constant-color and first/last-color rules score 50%; this does not exclude every possible shortcut. Scenarios are correlated and narrow. The strict score requires all 8 variants of a scenario to be correct. No claim of general reasoning follows. Results are not comparable to the flawed v1 first-object-only probes.",
         "probe_code_sha256": file_sha256(__file__), "torch": str(torch.__version__),
         "device": str(device), "results": summaries}, indent=2) + "\n")
 

@@ -14,7 +14,7 @@ python -m pip install -r requirements.txt
 
 ## Configure an experiment
 
-For the ready follow-up YAMLs and exact commands, use [FOLLOWUP_COMMANDS.md](FOLLOWUP_COMMANDS.md). Start with common validation scoring and the six one-hour XL/XXL seed trials; four-hour and equal-token runs are optional. The tools are implemented and locally checked, but the follow-up research results are pending. [NEXT_STEPS_GUIDE.md](NEXT_STEPS_GUIDE.md) explains why these comparisons matter.
+For the focused follow-up YAMLs and exact commands, use [FOLLOWUP_COMMANDS.md](FOLLOWUP_COMMANDS.md). Start with common validation scoring and six fresh one-hour XL/XXL seed trials (six GPU-hours), then stop and interpret. An optional 143,360,000-target pair adds about 1.5 GPU-hours; four-hour runs are deferred. The tools are locally checked and all follow-up research results remain pending. [NEXT_STEPS_GUIDE.md](NEXT_STEPS_GUIDE.md) explains the design and its limits.
 
 See [CONFIGURATION.md](CONFIGURATION.md) for a table explaining every setting, its allowed values, and its effect.
 
@@ -65,7 +65,7 @@ Training writes these files in `experiment.output_dir`:
 | `checkpoint.pt` | Model and optimizer states, model configuration, seed, elapsed training time, processed tokens, and resolved run settings. |
 | `training_summary.json` | Completed steps/targets, stop reason, final validation score, and separate training/evaluation/checkpoint-saving durations. |
 
-`evaluate` scores fixed sampled test windows. `score_checkpoints.py` scores multiple checkpoints on common validation targets, saving per-story losses and paired uncertainty diagnostics; its test mode is explicit. Close CE comparisons require the same tokenizer, targets, and context policy. `generate` uses the YAML prompt, length cap, temperature, top-k, and independent generation seed, stopping at EOT. Both `evaluate` and `generate` accept `--checkpoint`. `sample_stories.py` creates repeatable blind rating material, and `context_checks.py` supplies narrow paired color-tracking probes.
+`evaluate` scores fixed sampled test windows. `score_checkpoints.py` scores multiple checkpoints on common validation targets, saving per-story losses and paired uncertainty diagnostics; its test mode is explicit. Close CE comparisons require the same tokenizer, targets, and context policy. `generate` uses the YAML prompt, length cap, temperature, top-k, and independent generation seed, stopping at EOT. Both `evaluate` and `generate` accept `--checkpoint`. `sample_stories.py` creates supplementary blind rating material. The v2 `context_checks.py` diagnostic balances queried object, mention order, and colors across 80 prompts; it replaces a flawed positional-copying test and remains exploratory.
 
 ## Checks
 
@@ -73,7 +73,7 @@ Training writes these files in `experiment.output_dir`:
 python -m unittest discover -s tests -v
 ```
 
-The tests cover shifted targets, causal masking, tied weights, tiny-batch overfitting, independent seeds, config validation, weighted full-stream evaluation, EOT stopping, and step/time stopping with checkpoint loading. CPU checks passed during follow-up setup; the new GPU experiments have not been run. Smoke-generated text is not a quality benchmark.
+The tests cover shifted targets, causal masking, tied weights, tiny-batch overfitting, independent seeds, config validation, weighted evaluation, EOT stopping, step/time stopping with checkpoint loading, equal-token budget completion checks, and balanced probe design. All 19 CPU tests passed during the focused-plan update; new GPU experiments have not been run. Smoke-generated text is not a quality benchmark.
 
 ## Reproducing the report (DSA4212 submission)
 

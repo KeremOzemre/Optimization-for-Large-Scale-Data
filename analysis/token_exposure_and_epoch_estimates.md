@@ -52,7 +52,7 @@ For XXL with 100% data, the calculation is:
 
 That is about **3h 17m 59s total**, or **2h 17m 59s beyond the completed hour** at the same rate. The current training interface does not support resuming a checkpoint, so this additional duration is an arithmetic difference, not a supported continuation command.
 
-A shared **four-hour budget (14,400 seconds)** would provide a margin for every tested model to process at least one full-data-equivalent at the observed rates. It would give faster models more than one equivalent and would still not guarantee unique coverage. This is a proposed follow-up budget; it does not change the confirmed one-hour default.
+A shared **four-hour budget (14,400 seconds)** would provide a margin for every tested model to process at least one full-data-equivalent at the observed rates. It would give faster models more than one equivalent and would still not guarantee unique coverage. This is a deferred planning estimate, not a requirement of the focused follow-ups; the confirmed default remains one hour. One equivalent is not a special statistical milestone.
 
 ## One equivalent is not a true epoch
 
@@ -70,11 +70,11 @@ The broad statement that larger networks always work better is unsupported. The 
 
 A claim about performance after equal training exposure requires a different comparison. Use the same prepared data and token/epoch budget for all candidates, let runtime differ, and specify a common progress-based learning-rate policy. Equal time, equal data exposure, and equal theoretical FLOPs are different controls.
 
-The quadratic curve in `analyze_compute_optimal.py` is a descriptive fit to a small set of observed best-per-family scores; it does not establish a universal compute-optimal parameter count. The current runs share wall-clock time, not necessarily equal estimated FLOPs, and the fitted points can use different data subsets.
+The quadratic curve in `analyze_compute_optimal.py` is a descriptive fit to five full-data family scores; it does not establish a universal compute-optimal parameter count. The original runs share wall-clock time, not necessarily equal estimated FLOPs. The updated fit fixes the data fraction at 100%, but still uses one seed and unequal original validation samples.
 
 ## Suggested follow-up
 
 1. Keep the one-hour results and describe them explicitly as a fixed-time comparison.
-2. To probe whether XXL is time-limited, compare XL and XXL on the same full cache with a longer shared budget, such as four hours, and record the complete learning curves.
-3. To guarantee data coverage or compare equal exposure, implement and test sampling without replacement and an explicit token/epoch stop before launching those experiments.
-4. A fresh longer run needs a fresh output directory. The time-based learning-rate schedule also stretches with the new budget, so a four-hour run is not identical to appending three hours to the existing one-hour run.
+2. Score archived finalists on common validation targets, then run the six fresh one-hour seed trials in [FOLLOWUP_COMMANDS.md](../FOLLOWUP_COMMANDS.md). Interpret their repeatability before adding compute.
+3. Optionally compare fresh XL/XXL models at 35,000 updates (143,360,000 targets), using the implemented step stop and step-based schedule. At recorded rates this pair takes about 31 + 60 minutes. Equal exposure does not require sampling without replacement; guaranteed coverage would.
+4. Four-hour runs are deferred. Fresh runs require new output directories; the time schedule stretches with the budget, so four hours is not continuation of an existing one-hour schedule.

@@ -20,8 +20,9 @@ establish an optimal model size, convergence, or why XXL performs worse. Data-fr
 effects are small in these single-seed runs. Full-data exposure ranges from 0.303
 to 2.077 dataset-equivalents, and repeated random windows do not guarantee an epoch.
 The original validation-selected `xl_data50` has test loss 1.4846 and perplexity
-4.41. Common validation scoring, repeated seeds, longer runs, and equal-token
-comparisons are now set up but **have no follow-up results yet**.
+4.41. The focused follow-up prioritizes common validation scoring and six fresh
+one-hour XL/XXL seed trials, followed optionally by a short equal-token comparison.
+Four-hour runs are deferred. These checks **have no follow-up research results yet**.
 
 ## 1. Compute budget declaration
 
@@ -129,9 +130,12 @@ unequal validation samples do not justify a precise XL–XXL ranking by validati
 
 **(2) Small observed data-fraction effects** (`val_loss_vs_data.png`). Within each size
 the observed spread is about 0.007–0.014 nats and is not consistently monotonic.
+Nevertheless, the 100%-data validation loss is lower than the 25%-data loss in
+every family. This is a small observed benefit, not evidence that data amount is irrelevant.
 The 25% cache contains **118,450,614 tokens** and the full cache **473,992,236**;
 the earlier claim that even the smallest cache exceeded every run's exposure was
-incorrect. Several runs processed multiple cache-equivalents. The weak fraction
+incorrect. Small/25% processed **8.206 cache-equivalents**, so a blanket explanation
+that training was too short to revisit data is untenable. The weak fraction
 effect may reflect a redundant, homogeneous corpus and this recipe, but neither its
 cause nor its stability across training seeds has been established.
 
@@ -177,8 +181,12 @@ grammatical, on-topic TinyStories; the gains with size are in **coherence over l
 spans** — the `xl` winner maintains one consistent plot and characters across a full
 paragraph, whereas `small` more often loops ("painted a dog, and a dog") or drops a
 thread. These impressions came from a small, unblinded sample and are not a quantified
-capability result. The follow-up includes frozen prompts, two sampling seeds, blind
-rating sheets, and paired color-tracking probes, with results pending.
+capability result. Frozen prompts, two sampling seeds, and blind rating sheets are
+a secondary follow-up, with results pending. The original 20 color probes always
+queried the first-mentioned object, allowing a first-color copying rule to score
+100%. Their replacement is a versioned 80-prompt diagnostic that counterbalances
+the queried object, mention order, and color assignment. Its scores remain pending
+and would not establish general context-tracking or reasoning ability.
 
 ### 5.5 Exploratory size and compute plots
 
@@ -222,23 +230,35 @@ is not tuned per size; only one training seed was used; validation targets diffe
 by family; the source revision was not pinned; and all 20 test scores have already
 been inspected. Learning curves and small gaps cannot resolve these limitations alone.
 
-### 6.1 Follow-ups prepared, results pending
+### 6.1 Focused follow-ups, results pending
 
 | Check | Ready files / tool | Purpose | Status |
 | --- | --- | --- | --- |
-| Re-score archived Large/full, XL/50%, XL/full, XXL/full | `download_checkpoints.py`, `score_checkpoints.py` | Common validation targets and paired story intervals | Commands ready; no new scores |
-| XL/XXL, full data, seeds 42/43/44, 1 hour each | Six `configs/followups/*1h*.yaml` | Initial training-seed variability and reproducibility | Not trained |
-| XL/XXL, full data, seed 42, 4 hours each | Two `*4h*.yaml` | Compare larger equal-time budgets | Not trained |
-| XL/XXL, 115,721 updates each | Two `*equal_tokens*.yaml` | Equal 473,993,216 targets, step-based schedule | Not trained |
-| Frozen prompts, two generation seeds, two raters; paired context probes | `sample_stories.py`, `context_checks.py` | Supplement CE with narrow capability checks | Not evaluated |
+| First: re-score archived Large/full, XL/50%, XL/full, XXL/full | `download_checkpoints.py`, `score_checkpoints.py` | Common validation targets and paired story intervals | Commands ready; no new scores |
+| Main training: XL/XXL, full data, seeds 42/43/44, 1 hour each | Six `configs/followups/*1h*.yaml` | Initial training-seed variability and reproducibility; about 6 GPU-hours | Not trained |
+| Optional after interpretation: XL/XXL, 35,000 updates each | Two `*equal_tokens*.yaml` | Equal 143,360,000 targets, step-based schedule; about 1.5 GPU-hours | Not trained |
+| Supplement: frozen prompts, two generation seeds, two raters | `sample_stories.py` | Check whether observed loss differences are noticeable in stories | Not rated |
+| Exploratory diagnostic: 80 counterbalanced color prompts | `context_checks.py` | Remove the original first-color shortcut; narrow task only | Not evaluated |
+| Deferred: XL/XXL, full data, seed 42, 4 hours each | Two `*4h*.yaml` | A separate larger-budget question costing about 8 GPU-hours | Deferred; not trained |
 
 All new trials fix preparation seed 42, evaluation seed 43, and 65,536 in-loop
 validation targets. They start from random weights; there is no resume command.
-The four-hour schedule is stretched to its budget, so this tests a budget-specific
-recipe rather than continuation. Equal-token runs have a six-hour safety cap; runs
-that stop early are incomplete comparisons. Three training seeds provide an initial
-variability check; story-resampling intervals do not substitute for training repeats.
-Exact commands, result paths, and reporting rules are in `FOLLOWUP_COMMANDS.md`.
+The main sequence is common validation, six one-hour trials, then interpretation
+before choosing further work. The optional equal-token pair uses **35,000 × 4,096
+= 143,360,000 targets**. At the original measured throughputs this is roughly 31
+minutes for XL and 60 minutes for XXL; a two-hour safety cap per model marks early
+stops as incomplete. Both are fresh runs with the same step-based schedule, not
+comparisons against the old time-scheduled checkpoint. One cache-equivalent has no
+special statistical status and equal targets do not guarantee an epoch.
+
+Three seeds provide an initial repeatability check, and an inconclusive ranking
+is an acceptable outcome. This confirms a shared-recipe comparison; it does not
+optimize learning rates or other settings separately for each architecture.
+Story-resampling intervals do not substitute for training repeats. A later symmetric
+learning-rate sensitivity study or one-model study of much smaller data subsets
+would address separate questions. The deferred four-hour pair uses a stretched
+budget-specific schedule and is not continuation. Exact commands, result paths,
+and reporting rules are in `FOLLOWUP_COMMANDS.md`.
 
 ## 7. Conclusion
 

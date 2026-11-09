@@ -7,6 +7,9 @@ import re
 import statistics
 
 
+EQUAL_TOKEN_TARGETS = 35000 * 4096
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scores", required=True, help="One scores.csv from score_checkpoints.py")
@@ -40,8 +43,9 @@ def main():
     if len(hashes) != 1 or not all(hashes):
         warnings.append("Training-cache hashes are missing or differ; reconcile data provenance before interpreting differences.")
     for row in rows:
-        if "equal_tokens" in row["run"] and int(row["tokens_processed"]) != 473993216:
-            warnings.append(f"{row['run']} did not reach the equal-token target.")
+        if "equal_tokens" in row["run"] and int(row["tokens_processed"]) != EQUAL_TOKEN_TARGETS:
+            warnings.append(f"{row['run']} processed {int(row['tokens_processed']):,} targets; "
+                            f"the revised equal-token plan requires {EQUAL_TOKEN_TARGETS:,}.")
     lines = ["# Follow-up validation results", "", f"Source: `{args.scores}`.", "",
              "All scores use the common protocol saved beside the source CSV. Lower CE is better. "
              "Standard deviations describe training-seed variation, while paired story intervals in "

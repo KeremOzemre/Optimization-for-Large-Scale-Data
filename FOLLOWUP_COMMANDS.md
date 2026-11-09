@@ -1,41 +1,54 @@
-# Ready-to-run TinyStories follow-ups
+# Focused TinyStories follow-up commands
 
-The setup is implemented. **No new GPU training or full validation comparison has
-been run.** Use this file as the execution checklist; send back the resulting
-tables and logs before we revise the research conclusions. The CPU correctness
-tests have been run here, so you do not need to run them yourself.
+The main question remains: **which tested model predicts TinyStories best after
+one hour on the same GPU allocation, using our shared training recipe?**
+The original 20-run grid is exploratory evidence. Prioritize common validation
+and independent repeat trials before adding another research question.
+**All follow-up research results are pending.** Local correctness checks do not
+count as completed training experiments.
 
-Run commands from the project root. Use the **same GPU partition and software
-environment for all runs**; the original grid used `NVIDIA H100 NVL MIG 3g.47gb`.
-Run training jobs sequentially. A whole H100 and a MIG slice are different budgets.
+| Stage | Priority | Additional training | What it answers |
+| --- | --- | ---: | --- |
+| 1. Common validation audit of saved models | First | None | Does the recorded ranking hold on identical validation targets? |
+| 2. Three fresh one-hour seeds each for XL/XXL | Main experiment | 6 GPU-hours | Is the one-hour ranking repeatable under the shared recipe? |
+| 3. Short equal-token XL/XXL pair | Optional, after interpreting stage 2 | About 1.5 GPU-hours | Does the ranking change at equal exposure under a matched step schedule? |
+| Blind story ratings | Small supplement | None | Can readers notice differences in sampled stories? |
+| Four-hour runs, new data-fraction study, learning-rate tuning | Deferred | Separate budgets | Different questions; choose only after the core results. |
 
-## 1. Environment, data, and archived checkpoints
+Run from the project root, sequentially, on the **same GPU partition and software
+environment**. The original grid used `NVIDIA H100 NVL MIG 3g.47gb`, bfloat16.
+A whole H100 is a different allocation. Estimates exclude preparation, final
+validation, checkpoint saving, and the separate full-validation audit.
+
+## Setup once
 
 ```bash
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 export TIKTOKEN_CACHE_DIR="$PWD/data/tiktoken-cache"
 python run.py prepare --config configs/followups/xl_full_1h_seed42.yaml
+```
+
+A compatible full cache already exists locally at `data/tokens-full`; preparation
+reuses it. On a new machine, copy the exact cache or prepare it once, then reuse it
+throughout the experiment. Keep preparation seed 42 fixed. New runs record cache
+hashes and software versions; avoid changing packages between trials. Investigate
+incompatibility before rebuilding: do not use `--force` to bypass a mismatch.
+Old runs lack cache hashes, so matching recipe/counts cannot establish historical
+byte-for-byte identity.
+
+Four archived checkpoints and their logs/configs are already downloaded in
+`hf_cache/`: Large/full, XL/50%, XL/full, XXL/full (about 6.62 GB). They are for
+assessment; **new training starts from random weights**. Revision and SHA-256
+hashes are in `hf_cache/download_manifest.json` and the copied
+`analysis/followups/checkpoint_manifest.json`. Only on another machine or with
+missing files, run:
+
+```bash
 python download_checkpoints.py --revision fa18888b1b9b599e9deb455ca740896e7d0642f3
 ```
 
-The compatible full cache already exists locally at `data/tokens-full`; preparation
-reuses it. On another machine, copy this exact cache or prepare it once, then reuse
-it for every follow-up. New runs save cache hashes. Do not rebuild it between seeds.
-The archived runs did not record cache hashes, so identical recipe/counts alone
-cannot establish byte-for-byte identity with their original training cache.
-
-Four archived checkpoints are downloaded into `hf_cache/` (about 6.62 GB total):
-`large_data100`, `xl_data50`, `xl_data100`, `xxl_data100`. These cover a smaller
-reference, the originally selected model, and the two full-data finalists. They
-are for evaluation; **new training always starts from random weights**. The
-revision and SHA-256 hashes are in `hf_cache/download_manifest.json`. On this
-computer the download step has already been performed; repeat it only if files are
-missing or you move to another machine. It reuses matching files.
-
-## 2. First: audit the existing checkpoints on common validation targets
-
-This needs inference only. It does not retrain or use the test set.
+## 1. Audit existing checkpoints on common validation targets
 
 ```bash
 python score_checkpoints.py \
@@ -44,35 +57,36 @@ python score_checkpoints.py \
   --output-dir analysis/followups/archived_validation
 ```
 
-Default scoring covers **all 3,808,643 next-token targets** in `val.bin`, resetting
-context every 256 tokens and including the short tail. This is a common protocol,
-not the old unequal sampled validation. It also differs from the old full-test
-export, which dropped its short tail. Keep new and old metric labels separate.
+This performs inference only on all **3,808,643 next-token validation targets**,
+with context reset every 256 tokens and the short tail included. It repairs the
+original mismatch: Large scored 65,536 sampled targets, XL 32,768, XXL 16,384.
+The new full-stream scores must be labelled separately from the old sampled scores.
+The archived full-test evaluator also dropped its short tail; it is a different protocol.
 
-For a shorter audit matching the new in-loop target count, use a separate output:
+Read `scores.csv`, `protocol.json`, and `paired_comparisons.json` before training.
+Positive **B loss minus A loss** favours A. Per-story bootstrap intervals condition
+on the fixed checkpoints; they do not measure training-seed variability. Stories
+can be dependent through duplication and context across EOT, so treat intervals
+as diagnostics. The original validation-overhead and cache-provenance limitations
+cannot be repaired by re-scoring.
 
-```bash
-python score_checkpoints.py \
-  --checkpoints hf_cache/xl_data100/checkpoint.pt hf_cache/xxl_data100/checkpoint.pt \
-  --data-dir data/tokens-full --device cuda --precision bfloat16 \
-  --sample-windows 256 --seed 43 \
-  --output-dir analysis/followups/archived_sampled_validation
-```
+If this audit changes the ranking substantially, reconcile the data, precision,
+and protocol first. Do not interpret an unresolved mismatch by launching more runs.
+Large is a smaller reference; XL/50% audits the original selection. The main repeat
+comparison below fixes data at 100% for both XL and XXL.
 
-That scores the same 65,536 sampled targets for both models. The full-pass audit
-is the primary comparison; the sampled version checks agreement with in-loop scores.
-`paired_comparisons.json` reports **B CE minus A CE**: positive favours A. The
-story-resampling interval conditions on fixed checkpoints, assumes stories are
-useful resampling units, and does not measure variation from retraining. Duplicate
-stories and context across story boundaries can induce dependence; interpret the
-interval as a diagnostic, not a complete uncertainty guarantee.
+## 2. Main experiment: three one-hour seeds per finalist
 
-## 3. Priority training: three one-hour seeds per finalist
+These are **six fresh runs**, about six GPU-hours total. The original seed-42
+checkpoints remain historical baselines, not replacements for new protocol-matched
+trials. The ready configurations are:
 
-These six runs cost approximately **6 model-hours**, plus setup/final evaluation.
-They retain XL's 8×2 and XXL's 4×4 microbatch/accumulation, giving 4,096 training
-targets per update. Preparation seed stays 42, evaluation seed stays 43, and
-validation always uses 4 sequences × 64 batches × 256 = 65,536 targets.
+| Model | Training seeds | YAMLs | Output root |
+| --- | --- | --- | --- |
+| XL | 42, 43, 44 | `configs/followups/xl_full_1h_seed42.yaml`, `xl_full_1h_seed43.yaml`, `xl_full_1h_seed44.yaml` | `runs/followups_1h/` |
+| XXL | 42, 43, 44 | `configs/followups/xxl_full_1h_seed42.yaml`, `xxl_full_1h_seed43.yaml`, `xxl_full_1h_seed44.yaml` | `runs/followups_1h/` |
+
+Run one command at a time, stopping to resolve any failure before the next command:
 
 ```bash
 python run.py train --config configs/followups/xl_full_1h_seed42.yaml
@@ -83,145 +97,158 @@ python run.py train --config configs/followups/xl_full_1h_seed44.yaml
 python run.py train --config configs/followups/xxl_full_1h_seed44.yaml
 ```
 
-Each command must finish successfully before the next begins. Output folders must
-be unused; if a run fails, keep the failure log and choose a fresh output directory
-for a retry. Seed 42 checks reproducibility under the corrected protocol; 43 and
-44 are independent training trials. GPU numerical nondeterminism can remain.
+All trials share preparation seed 42, evaluation seed 43, and the full cache.
+XL uses microbatch 8 with accumulation 2; XXL uses 4 with accumulation 4. Both
+process **4,096 targets per update**. Both evaluate 4 sequences x 64 batches x
+256 tokens = **65,536 fixed validation targets** approximately every five minutes.
+Initialization, dropout, and training-window randomness vary with training seed.
+Matching numeric seeds across architectures does not align their initialization noise.
 
-Score all six on the same complete validation stream:
+Training refuses an existing output directory. Preserve failed logs; use a fresh
+output directory for a retry. Do not overwrite the historical `results/` archive.
+Once all six runs succeed, score and summarize them together:
 
 ```bash
 python score_checkpoints.py \
-  --checkpoints runs/followups_1h/*/checkpoint.pt \
-  --device cuda --precision float32 \
+  --checkpoints runs/followups_1h/xl_full_1h_seed42/checkpoint.pt runs/followups_1h/xxl_full_1h_seed42/checkpoint.pt runs/followups_1h/xl_full_1h_seed43/checkpoint.pt runs/followups_1h/xxl_full_1h_seed43/checkpoint.pt runs/followups_1h/xl_full_1h_seed44/checkpoint.pt runs/followups_1h/xxl_full_1h_seed44/checkpoint.pt \
+  --data-dir data/tokens-full --device cuda --precision float32 \
   --output-dir analysis/followups/seed_validation
 python summarize_followups.py \
   --scores analysis/followups/seed_validation/scores.csv \
   --output analysis/followups/seed_summary.md
 ```
 
-Interpret individual scores, mean/sample SD per family, and paired XXL−XL
-differences for seeds 42/43/44. Preserve every seed, including inconvenient results.
-Three seeds give an initial variability estimate; they do not establish a universal
-ranking. The six-run comparison is more informative than reporting the best seed.
+### Stop and interpret before spending more compute
 
-## 4. Optional longer equal-time experiment: four hours each
+Report every seed, mean/sample SD, paired XXL-minus-XL loss differences, actual
+training time, throughput, and processed targets. Positive paired differences
+favour XL. Three seeds provide an initial repeatability check, not a precise
+uncertainty guarantee. A small or inconsistent difference supports an inconclusive
+ranking; do not select the best seed or keep running until a preferred model wins.
 
-Use this to ask whether the observed ranking changes under a **larger time budget**.
-It costs approximately **8 model-hours**. Both are fresh seed-42 runs; their
-warmup/cosine schedules stretch to four hours. This compares budget-specific recipes,
-not continuation of the one-hour checkpoints or training duration in isolation.
+If one model consistently leads, describe it as best **under this shared recipe**.
+No per-size optimizer search was performed. Small numerical gaps need practical
+context: a CE difference `d` corresponds to a perplexity ratio `exp(d)`; statistical
+separation alone does not establish an important story-quality improvement.
+Return these results before deciding whether stage 3 is needed.
 
-```bash
-python run.py train --config configs/followups/xl_full_4h_seed42.yaml
-python run.py train --config configs/followups/xxl_full_4h_seed42.yaml
-python score_checkpoints.py \
-  --checkpoints runs/followups_1h/xl_full_1h_seed42/checkpoint.pt runs/followups_1h/xxl_full_1h_seed42/checkpoint.pt runs/followups_4h/*/checkpoint.pt \
-  --device cuda --precision float32 \
-  --output-dir analysis/followups/budget_validation
-python summarize_followups.py \
-  --scores analysis/followups/budget_validation/scores.csv \
-  --output analysis/followups/budget_summary.md
-```
+## 3. Optional: short equal-token comparison
 
-One seed at four hours is exploratory. Do not promise that XXL will overtake XL;
-the result is currently unknown. Use additional seeds if a close four-hour ranking
-becomes central to the report.
+This is a separate question about equal training exposure. The revised target is
+**35,000 updates x 4,096 = 143,360,000 targets per model**. It is near XXL's original
+one-hour exposure, not an attempted epoch. One full-cache-equivalent has no special
+significance under random sampling. The old 474M-target proposal is superseded.
 
-## 5. Optional equal-token experiment
-
-Use this to ask about performance after the **same number of training targets**.
-Each model takes **115,721 optimizer steps × 4,096 = 473,993,216 targets**. This is
-980 more than one full-cache-equivalent. Warmup/cosine progress uses completed
-steps, so both models see the same learning-rate sequence at the same exposure.
-They also use the same seed and effective batch, giving the same sampled window
-sequence despite different microbatch grouping. Different microbatch grouping can
-still change dropout randomness and numerical rounding.
+| Config | Output directory | Expected training time on the original allocation |
+| --- | --- | ---: |
+| `configs/followups/xl_full_equal_tokens_seed42.yaml` | `runs/followups_equal_tokens_143m/xl_full_equal_tokens_seed42` | About 31 minutes |
+| `configs/followups/xxl_full_equal_tokens_seed42.yaml` | `runs/followups_equal_tokens_143m/xxl_full_equal_tokens_seed42` | About 60 minutes |
 
 ```bash
 python run.py train --config configs/followups/xl_full_equal_tokens_seed42.yaml
 python run.py train --config configs/followups/xxl_full_equal_tokens_seed42.yaml
 python score_checkpoints.py \
-  --checkpoints runs/followups_equal_tokens/*/checkpoint.pt \
-  --device cuda --precision float32 \
-  --output-dir analysis/followups/equal_token_validation
+  --checkpoints runs/followups_equal_tokens_143m/xl_full_equal_tokens_seed42/checkpoint.pt runs/followups_equal_tokens_143m/xxl_full_equal_tokens_seed42/checkpoint.pt \
+  --data-dir data/tokens-full --device cuda --precision float32 \
+  --output-dir analysis/followups/equal_token_143m_validation
 python summarize_followups.py \
-  --scores analysis/followups/equal_token_validation/scores.csv \
-  --output analysis/followups/equal_token_summary.md
+  --scores analysis/followups/equal_token_143m_validation/scores.csv \
+  --output analysis/followups/equal_token_143m_summary.md
 ```
 
-Old throughputs suggest roughly **1h 42m XL + 3h 18m XXL**, but new hardware and
-validation overhead can change that. The six-hour cap **per model** is a safety
-limit. Check `training_summary.json`: successful runs must say `stop_reason:
-"max_steps"`, `steps: 115721`, and `tokens_processed: 473993216`. A run stopped by
-`time_limit` is incomplete; choose a larger cap and a fresh directory before retrying.
-Sampling remains with replacement. This is **not a guaranteed epoch**, and the
-saved optimizer state does not provide a resume command.
+Both models start fresh with seed 42 and use `schedule.progress: steps`:
+700 warmup updates, then cosine decay over the remaining update budget. The
+sampled training-window sequence and learning rates match by update, while
+microbatch grouping can still change dropout draws and numerical rounding.
+Do not substitute the old time-scheduled XXL checkpoint for a new step-scheduled run.
 
-Do not compare the one-hour and equal-token losses as if only exposure changed:
-their schedule progress rules differ. The controlled equal-token comparison is
-between the two equal-token runs.
+Each YAML has a **7,200-second safety cap**. Before accepting the comparison, both
+`training_summary.json` files must contain `stop_reason: "max_steps"`,
+`steps: 35000`, and `tokens_processed: 143360000`. A time-capped run is incomplete;
+preserve it and use a fresh directory and larger cap if a retry is needed.
+No resume interface exists. Different hardware/overhead can change estimated times.
 
-## 6. Capability checks, separate from model selection
+Report this single pair as exploratory. Equal targets allow different runtime and
+compute. They do not guarantee unique coverage or convergence. Comparing this pair
+with the one-hour runs does not isolate exposure as the cause of a ranking change,
+because the schedule rule also changes. Compare XL and XXL within each protocol.
 
-These commands use the archived full-data finalists first. The same tools can be
-used on the new checkpoints once the primary comparisons are complete.
+## 4. Supplement: blind story ratings
+
+This uses archived full-data finalists and no further training:
 
 ```bash
 python sample_stories.py \
   --checkpoints hf_cache/xl_data100/checkpoint.pt hf_cache/xxl_data100/checkpoint.pt \
   --device cuda --output-dir analysis/followups/stories
-python context_checks.py \
-  --checkpoints hf_cache/xl_data100/checkpoint.pt hf_cache/xxl_data100/checkpoint.pt \
-  --device cuda --output-dir analysis/followups/context_checks
 ```
 
-The sampling command freezes 20 prompts, temperature 0.8, top-k 40, maximum 150
-new tokens, and generation seeds 101/102. It produces 80 samples for two models,
-stops at EOT, and records whether EOT or the length cap ended each sample.
-Do not improve prompts after seeing the outputs and still call them a frozen test.
+The frozen 20 prompts, seeds 101/102, temperature 0.8, top-k 40, and 150-token cap
+produce 80 samples for two models. EOT ends a story early; termination is recorded.
+Give two raters only `blind_samples.md` and `ratings.csv`; `samples.jsonl` reveals
+model identities. Do not revise prompts after inspecting the outputs and still
+call them a frozen evaluation. Both raters score independently:
 
-Give raters only `blind_samples.md` and `ratings.csv`, without `samples.jsonl`
-(the latter reveals model identities). Two raters independently score:
-
-| Column | 1 | 3 | 5 |
+| Criterion | 1 | 3 | 5 |
 | --- | --- | --- | --- |
 | Grammar | Hard to read | Some errors | Fluent |
-| Plot | Incoherent or no progression | Partly connected | Clear, connected progression |
-| Consistency | Repeated contradictions | Some tracking errors | Stable characters and facts |
+| Plot | No coherent progression | Partly connected | Clear progression |
+| Consistency | Repeated contradictions | Some tracking errors | Stable facts/characters |
 | Repetition | Severe loops | Noticeable repetition | Little unnecessary repetition |
 
-Compare paired prompt/seed scores and report rater disagreement. A story hitting
-the length cap is not automatically an incoherent story. The context tool uses ten
-paired color-swap scenarios (20 prompts), checks both swapped versions, and saves
-candidate log-probabilities. This narrow, hand-written diagnostic is **not evidence
-of general reasoning ability**. Human ratings still need actual raters.
+Report paired prompt/seed observations and rater disagreement. A length-capped
+story is not automatically incoherent. These ratings supplement CE; they do not
+confirm its ranking or establish general reasoning ability.
 
-## 7. Test use and files to send back
+## 5. Deferred checks and scope limits
 
-Use validation for the comparisons above. All 20 original test scores have already
-been inspected, so the test set is not fresh confirmation for adaptive follow-ups.
-After fixing the conclusions, optional descriptive test evaluation is:
+- **Four-hour pair:** the `*4h*.yaml` files remain as deferred templates. Their eight
+  GPU-hours and one seed per model are lower priority than repeatability. A stretched
+  time schedule also prevents interpreting them as continuation or duration alone.
+- **Data-fraction study:** all five families have lower recorded validation CE on
+  100% than on 25%, with small gaps. Small/25% processed 8.206 cache-equivalents,
+  so insufficient time to revisit data cannot explain the whole grid. If this
+  becomes the main question, choose one model and smaller subsets (e.g. 1/5/25/100%)
+  at fixed target exposure, with repeated subsets/seeds. No new subset YAMLs are included.
+- **Learning-rate sensitivity:** a later symmetric search for both finalists can
+  check recipe sensitivity. Do not tune only the losing model and claim an optimized
+  architecture ranking. It requires a separate budget and fixed selection protocol.
+- **Context probes:** the old color-swap test admitted a first-color shortcut
+  (20/20 without tracking entities). The revised `context_checks.py` diagnostic
+  counterbalances query entity, mention order, and color assignment: 80 prompts
+  across ten scenarios. It is versioned and tested against simple positional/color
+  heuristics, but remains a narrow, correlated hand-written task. It is not a
+  priority or a validated measure of general context tracking. Optional diagnostic:
 
 ```bash
-python score_checkpoints.py \
-  --checkpoints runs/followups_1h/xl_full_1h_seed42/checkpoint.pt runs/followups_1h/xxl_full_1h_seed42/checkpoint.pt \
-  --split test --device cuda --precision float32 \
-  --output-dir analysis/followups/descriptive_test
+python context_checks.py \
+  --checkpoints hf_cache/xl_data100/checkpoint.pt hf_cache/xxl_data100/checkpoint.pt \
+  --device cuda --output-dir analysis/followups/context_checks_balanced_v2
 ```
 
-Do not start with that command or use it to choose hyperparameters.
+- **Epochs/convergence:** neither is needed for the fixed-time question. The current
+  sampler uses replacement. Equal-time, equal-token, guaranteed-coverage, and
+  convergence experiments are different controls.
+- **Test data:** all 20 original test scores were inspected. Further choices use
+  validation. Reused test evaluation may be descriptive after decisions are fixed;
+  it is not fresh confirmation. No test-scoring command is part of this checklist.
 
-| Location | Files | What to return |
+## Files to send back
+
+| Location | Return files | Purpose |
 | --- | --- | --- |
-| `analysis/followups/<comparison>/` | `scores.csv`, `protocol.json`, `paired_comparisons.json`, `*_stories.npz`, `*_training_config.json` | The entire comparison directory |
-| `runs/followups_*/<run>/` | `metrics.csv`, `run_config.json`, `training_summary.json`, `checkpoint.pt` | CSV and JSON files first; preserve checkpoint for later scoring |
-| `analysis/followups/` | `seed_summary.md`, optional budget/equal-token summaries | All summaries you produced |
-| `analysis/followups/stories/` | `samples.jsonl`, `protocol.json`, `blind_samples.md`, completed `ratings.csv` | All files after both raters finish |
-| `analysis/followups/context_checks/` | `predictions.csv`, `summary.json` | Both files |
-| `hf_cache/` | `download_manifest.json` | The manifest; no need to send existing multi-GB checkpoints |
+| `analysis/followups/archived_validation/` | Entire directory | Common-score audit of saved models |
+| `analysis/followups/seed_validation/` and `seed_summary.md` | Entire directory and summary | Main repeated-seed evidence |
+| `runs/followups_1h/<run>/` | `metrics.csv`, `run_config.json`, `training_summary.json` | Actual recipe, curves, timing and exposure; preserve checkpoints |
+| Optional `analysis/followups/equal_token_143m_validation/` and its summary | Entire directory and summary | Equal-exposure evidence |
+| Optional `runs/followups_equal_tokens_143m/<run>/` | CSV/JSON files; preserve checkpoint | Check both runs reached the target |
+| Optional `analysis/followups/stories/` | Samples, protocol, blind sheet, completed ratings | Supplementary story assessment |
+| Optional `analysis/followups/context_checks_balanced_v2/` | Predictions and summary | Narrow diagnostic, kept separate from old probe results |
+| `hf_cache/download_manifest.json` | Manifest only | Archived checkpoint provenance |
 
-**Recommended first batch:** steps 2 and 3. Then send the results before spending
-the additional eight hours or roughly five hours on steps 4 and 5. Everything is
-configured, but these optional experiments need not all be run at once. The report
-currently labels every follow-up as pending; it will be updated from actual results.
+Scoring directories include `scores.csv`, `protocol.json`,
+`paired_comparisons.json`, per-story `.npz` files, and saved training configs.
+No need to send the already-downloaded multi-GB baseline checkpoints.
+**Recommended stopping point: stages 1 and 2.** Their results determine whether
+another 1.5 training hours would be useful. All planned work remains labelled
+pending in the report until actual results arrive.

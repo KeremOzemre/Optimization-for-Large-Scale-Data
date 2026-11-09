@@ -1,3 +1,4 @@
+# DEFERRED template: not part of the focused study. See FOLLOWUP_COMMANDS.md.
 # Fresh four-hour run; not a checkpoint continuation.
 experiment:
   name: xxl_full_4h_seed42

@@ -113,4 +113,10 @@ These settings affect the `generate` action after loading a checkpoint. They do 
 - **Warmup progress:** time limit or maximum steps, multiplied by `schedule.warmup_fraction`.
 - **Minimum learning rate:** `optimizer.learning_rate × schedule.min_lr_ratio`.
 
+The focused follow-up pair uses `max_steps: 35000`, 4,096 targets/update,
+`schedule.progress: steps`, and a 7,200-second safety cap: 143,360,000 targets per
+model. Accept it only when both saved summaries report `stop_reason: max_steps`
+and the exact target count. See [FOLLOWUP_COMMANDS.md](FOLLOWUP_COMMANDS.md) for
+the main one-hour study and optional equal-token commands.
+
 For the first model-size comparisons, keep the data, tokenizer, training budget, hardware, optimizer, schedule, and evaluation settings fixed while changing layers or width. Give every run a fresh output directory and compare validation loss alongside the actual parameter count and processed training tokens recorded in the output files. Use the test set after selecting a model from validation results.

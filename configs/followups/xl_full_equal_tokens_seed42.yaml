@@ -1,8 +1,8 @@
-# 115721 updates x 4096 = 473993216 targets. Six-hour safety cap.
+# Optional short comparison: 35000 updates x 4096 = 143360000 targets. Two-hour safety cap.
 experiment:
   name: xl_full_equal_tokens_seed42
   seed: 42
-  output_dir: runs/followups_equal_tokens/xl_full_equal_tokens_seed42
+  output_dir: runs/followups_equal_tokens_143m/xl_full_equal_tokens_seed42
 data:
   dataset: roneneldan/TinyStories
   train_split: train
@@ -24,11 +24,11 @@ model:
 training:
   device: cuda
   precision: bfloat16
-  time_limit_seconds: 21600
+  time_limit_seconds: 7200
   microbatch_size: 8
   gradient_accumulation_steps: 2
   log_interval_steps: 10
-  max_steps: 115721
+  max_steps: 35000
 optimizer:
   learning_rate: 0.0003
   weight_decay: 0.1
