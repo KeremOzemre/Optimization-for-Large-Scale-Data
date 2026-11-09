@@ -17,6 +17,10 @@ Four students are training a small GPT language model from random weights on Tin
 
 See [CONFIGURATION.md](CONFIGURATION.md) for all configuration keys, allowed values, defaults, and explanations of their effects.
 
+See [analysis/token_exposure_and_epoch_estimates.md](analysis/token_exposure_and_epoch_estimates.md) for the saved-run token audit and measured-throughput estimates. Dataset-equivalent exposure counts repeated targets; it does not verify a full pass over unique positions.
+
+See [NEXT_STEPS_GUIDE.md](NEXT_STEPS_GUIDE.md) for the proposed validation audit, repeat trials, longer-budget and equal-token comparisons, and capability checks. Validated one-/four-hour XL/XXL configs in `configs/followups/` have not been run; they equalize sampled validation to 65,536 targets while retaining the original effective training batch.
+
 `configs/default.yaml` is the main configuration for an experiment; copy it and change its name and unused output directory for each new run. `configs/smoke.yaml` is a short, small-data example. `run.py` is the user-facing entry point:
 
 ```bash
@@ -34,7 +38,13 @@ For the first model-size comparisons, use the same prepared data, tokenizer, see
 
 ## Current status and limitations
 
-The central `run` path was smoke-tested on Apple MPS: fresh small-data preparation, compatible cache reuse, training with finite loss, periodic/final validation, checkpoint loading, test evaluation, and generation worked. Changing model width in the YAML changed the saved model configuration and parameter count; existing output directories and incompatible caches were rejected. Correct target shifting, causal masking, weight tying, and tiny-batch overfitting have focused tests. The full token cache and one-hour run have not been executed; CUDA and CPU end-to-end runs have not been checked here. Evaluation samples a fixed number of token windows rather than exhaustively scoring every held-out token. Training samples random windows with replacement, so one hour does not guarantee an epoch or unique coverage. The upstream dataset revision is not pinned; cached tokens are reproducible for the recorded preparation settings, but a future fresh download could change if the source changes.
+The central pipeline was smoke-tested on Apple MPS, including preparation, training, evaluation, checkpoint loading, and generation. Focused tests cover shifted targets, causal masking, weight tying, and tiny-batch overfitting. The full token cache is prepared. The `results/` archive contains logs, saved configurations, and test-result files for 20 one-hour CUDA runs: five model families (small through XXL) across 25/50/75/100% story subsets, on an NVIDIA H100 NVL MIG 3g.47gb partition using bfloat16. Checkpoints are not included locally, so these archived checkpoints cannot be independently re-evaluated here. All 262,432 logged token counters match the completed-step formula.
+
+On the full cache of 473,992,236 tokens, one-hour exposure ranges from 2.077 dataset-equivalents for small to 0.303 for XXL. The measured-throughput estimate for XXL to process one full-cache-equivalent is about 3h 18m; this is not a guarantee of a complete epoch. Training still samples windows with replacement and has no epoch stop or resume interface. Validation samples fixed windows, and only one training seed is recorded per configuration. The shared seed also controls the data split. The dataset revision is not pinned.
+
+The supported conclusion is the best observed configuration under the fixed-time shared recipe: XL has the lowest recorded validation loss among the tested families. A universal claim that larger models are better, or that all models were trained to convergence or equal exposure, is unsupported. A four-hour follow-up budget is a proposal only; the confirmed default remains one hour.
+
+Follow-up audit findings: original sampled validation sizes differ by family (Large 65,536, XL 32,768, XXL 16,384 targets); compare saved finalists on common validation targets before interpreting close differences. Existing test exports use common non-overlapping target windows. The additional 30-minute/context runs under `runs/` record `NVIDIA H100 NVL`, while the main grid records an H100 MIG partition; hardware comparability needs reconciliation. Report claims about insufficient token volume, automatic XXL overtaking, and an isolated budget effect need qualification as described in the guide.
 
 ## Possible later experiments and open questions
 
@@ -42,6 +52,6 @@ Potential extensions include context length, depth versus width, data selection,
 
 ## Next steps
 
-1. Review the baseline configuration and prepare the full token cache.
-2. Copy the baseline configuration for each model size, changing its experiment name and output directory.
-3. Run separate one-hour experiments on the same hardware, compare validation loss alongside token throughput, then evaluate the selected model on test data.
+1. Reconcile the report claims and hardware labels, then compare saved finalists on identical validation targets using the commands in `NEXT_STEPS_GUIDE.md`.
+2. Check the one-hour ranking's reproducibility; separate preparation and evaluation seeds from training randomness before independent repeat trials.
+3. Choose a longer shared-time or equal-token follow-up. Equal-token stopping and guaranteed epochs require explicit implementation; increasing a time limit alone cannot guarantee coverage.

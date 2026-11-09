@@ -14,6 +14,8 @@ python -m pip install -r requirements.txt
 
 ## Configure an experiment
 
+For a staged plan to strengthen the existing results, see [NEXT_STEPS_GUIDE.md](NEXT_STEPS_GUIDE.md), including proposed confirmation configs, evaluation checks, and code prerequisites for independent-seed or equal-token studies.
+
 See [CONFIGURATION.md](CONFIGURATION.md) for a table explaining every setting, its allowed values, and its effect.
 
 Edit a copy of [configs/default.yaml](configs/default.yaml) for each run. It is the central place for the data, tokenizer, model, training, optimizer, schedule, evaluation, and generation settings. Give every run a new `experiment.name` and **unused** `experiment.output_dir`; training refuses to overwrite an existing output folder. [configs/smoke.yaml](configs/smoke.yaml) is a short example using the small token cache. The old script-specific training flags have been replaced by `--config` on `run.py`.
