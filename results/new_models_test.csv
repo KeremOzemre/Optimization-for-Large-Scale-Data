@@ -1,0 +1,5 @@
+model,test_loss,test_perplexity,evaluated_tokens
+large_t1800,1.5504,4.71,65536
+xl_t1800,1.5942,4.92,32768
+xxl_t1800,1.6987,5.47,16384
+xl_ctx512,1.4606,4.31,32768
