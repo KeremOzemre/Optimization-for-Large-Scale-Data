@@ -2,7 +2,6 @@ experiment:
   name: baseline
   seed: 42
   output_dir: out/baseline
-
 data:
   dataset: roneneldan/TinyStories
   train_split: train
@@ -12,17 +11,15 @@ data:
   validation_stories: null
   test_stories: null
   cache_dir: data/tinystories/full
-
+  preparation_seed: 42
 tokenizer:
   name: gpt2
-
 model:
   layers: 4
   width: 256
   heads: 4
   context_length: 256
   dropout: 0.0
-
 training:
   device: auto
   precision: auto
@@ -30,23 +27,26 @@ training:
   microbatch_size: 16
   gradient_accumulation_steps: 1
   log_interval_steps: 10
-
+  max_steps: null
 optimizer:
   learning_rate: 0.0003
   weight_decay: 0.1
-  betas: [0.9, 0.95]
+  betas:
+  - 0.9
+  - 0.95
   gradient_clip: 1.0
-
 schedule:
   warmup_fraction: 0.02
   min_lr_ratio: 0.1
-
+  progress: time
 evaluation:
   interval_seconds: 300
   batches: 16
-
+  microbatch_size: 16
+  seed: 43
 generation:
   prompt: Once upon a time
   max_new_tokens: 100
   temperature: 0.8
   top_k: 40
+  seed: 101

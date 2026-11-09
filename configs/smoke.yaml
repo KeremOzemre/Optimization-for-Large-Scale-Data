@@ -1,9 +1,7 @@
-# Fast end-to-end check. Copy default.yaml for real model-size comparisons.
 experiment:
   name: smoke
   seed: 42
   output_dir: out/config-smoke
-
 data:
   dataset: roneneldan/TinyStories
   train_split: train
@@ -13,17 +11,15 @@ data:
   validation_stories: 200
   test_stories: 200
   cache_dir: data/tokens-small
-
+  preparation_seed: 42
 tokenizer:
   name: gpt2
-
 model:
   layers: 2
   width: 128
   heads: 4
   context_length: 64
   dropout: 0.0
-
 training:
   device: auto
   precision: auto
@@ -31,23 +27,26 @@ training:
   microbatch_size: 4
   gradient_accumulation_steps: 1
   log_interval_steps: 10
-
+  max_steps: null
 optimizer:
   learning_rate: 0.0003
   weight_decay: 0.1
-  betas: [0.9, 0.95]
+  betas:
+  - 0.9
+  - 0.95
   gradient_clip: 1.0
-
 schedule:
   warmup_fraction: 0.02
   min_lr_ratio: 0.1
-
+  progress: time
 evaluation:
   interval_seconds: 1
   batches: 2
-
+  microbatch_size: 4
+  seed: 43
 generation:
   prompt: Once upon a time
   max_new_tokens: 30
   temperature: 0.8
   top_k: 40
+  seed: 101

@@ -1,4 +1,4 @@
-"""Evaluate a trained checkpoint on the untouched TinyStories test split."""
+"""Evaluate a trained checkpoint on the separate TinyStories test split."""
 
 import json
 from pathlib import Path
@@ -21,9 +21,10 @@ def evaluate_checkpoint(settings, checkpoint_path):
         data_dir = saved_config["data_dir"]  # Checkpoints from the earlier CLI pipeline.
     block_size = checkpoint["model_config"]["block_size"]
     test_tokens = load_tokens(Path(data_dir), "test", block_size)
-    batches = fixed_batches(test_tokens, settings["training"]["microbatch_size"],
+    batches = fixed_batches(test_tokens, settings["evaluation"].get(
+                                "microbatch_size", settings["training"]["microbatch_size"]),
                             block_size, settings["evaluation"]["batches"],
-                            checkpoint["seed"] + 2)
+                            settings["evaluation"].get("seed", checkpoint["seed"] + 1) + 1)
     loss, perplexity, count = evaluate_model(model, test_tokens, batches,
                                               block_size, device, precision)
     print(f"Test loss: {loss:.4f}; perplexity: {perplexity:.2f}; "

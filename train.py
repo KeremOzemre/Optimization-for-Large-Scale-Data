@@ -6,6 +6,8 @@ train.py at commit 3adf61e154c3fe3fca428ad6bc3818b27a3b8291 (MIT).
 
 from contextlib import nullcontext
 import csv
+import hashlib
+from importlib.metadata import version
 from dataclasses import asdict
 import json
 import math
@@ -114,7 +116,7 @@ def evaluate_model(model, tokens, batches, block_size, device, precision="auto")
 
 
 def learning_rate(elapsed, time_limit, peak_lr, warmup_fraction, min_lr_ratio):
-    """Time-based warmup followed by cosine decay to a fraction of peak LR."""
+    """Warmup and cosine decay; both progress arguments use seconds or steps."""
     minimum = peak_lr * min_lr_ratio
     warmup = time_limit * warmup_fraction
     if elapsed < warmup:
@@ -130,6 +132,32 @@ def load_checkpoint_model(path, device):
     model.to(device)
     model.eval()
     return model, checkpoint
+
+
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def run_provenance(data_dir):
+    """Record the actual code, environment, and cache, before the training timer."""
+    try:
+        commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        commit = None
+    return {
+        "git_commit": commit,
+        "code_sha256": {name: file_sha256(Path(__file__).parent / name)
+                        for name in ("run.py", "train.py", "prepare.py", "model.py")},
+        "data_sha256": {name: file_sha256(data_dir / name)
+                        for name in ("meta.json", "train.bin", "val.bin", "test.bin")},
+        "python": platform.python_version(),
+        "packages": {name: version(name) for name in ("torch", "numpy", "tiktoken", "datasets")},
+        "cuda_version": torch.version.cuda,
+    }
 
 
 def train_model(settings):
@@ -178,8 +206,11 @@ def train_model(settings):
     rng = np.random.default_rng(args.seed)
     train_tokens = load_tokens(data_dir, "train", args.block_size)
     val_tokens = load_tokens(data_dir, "val", args.block_size)
-    val_batches = fixed_batches(val_tokens, args.batch_size, args.block_size,
-                                args.eval_batches, args.seed + 1)
+    val_batches = fixed_batches(val_tokens, evaluation.get("microbatch_size", args.batch_size),
+                                args.block_size, args.eval_batches,
+                                evaluation.get("seed", args.seed + 1))
+    max_steps = training.get("max_steps")
+    tokens_per_step = args.batch_size * args.block_size * args.grad_accum_steps
 
     config = GPTConfig(block_size=args.block_size, vocab_size=tokenizer.n_vocab,
                        n_layer=args.n_layer, n_head=args.n_head,
@@ -195,6 +226,10 @@ def train_model(settings):
         "precision": precision, "vocab_size": tokenizer.n_vocab,
         "parameter_count": parameter_count,
         "prepared_token_counts": metadata["token_counts"],
+        "validation_targets": sum(len(starts) for starts in val_batches) * args.block_size,
+        "tokens_per_step": tokens_per_step,
+        "target_training_tokens": max_steps * tokens_per_step if max_steps else None,
+        **run_provenance(data_dir),
     }}
     (out_dir / "run_config.json").write_text(json.dumps(run_config, indent=2) + "\n")
     print(f"Training {parameter_count:,} parameters on {device} with {precision}; output: {out_dir}", flush=True)
@@ -204,6 +239,7 @@ def train_model(settings):
     next_eval = args.eval_interval_seconds
     last_train_loss = float("nan")
     current_lr = args.learning_rate
+    stop_reason = "time_limit"
     # Preparation, model creation, and optimizer creation are outside this timer.
     loop_start = time.perf_counter()
     with (out_dir / "metrics.csv").open("w", newline="") as csv_file:
@@ -213,8 +249,13 @@ def train_model(settings):
             elapsed = time.perf_counter() - loop_start
             if step and elapsed >= args.time_limit_seconds:
                 break
+            if max_steps is not None and step >= max_steps:
+                stop_reason = "max_steps"
+                break
+            progress, limit = ((step, max_steps) if schedule.get("progress", "time") == "steps"
+                               else (elapsed, args.time_limit_seconds))
             current_lr = learning_rate(
-                elapsed, args.time_limit_seconds, args.learning_rate,
+                progress, limit, args.learning_rate,
                 schedule["warmup_fraction"], schedule["min_lr_ratio"])
             for group in optimizer.param_groups:
                 group["lr"] = current_lr
@@ -231,14 +272,15 @@ def train_model(settings):
                 torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
             optimizer.step()
             step += 1
-            tokens_processed += args.batch_size * args.block_size * args.grad_accum_steps
+            tokens_processed += tokens_per_step
             last_train_loss = (loss_sum / args.grad_accum_steps).item()
             elapsed = time.perf_counter() - loop_start
             if not math.isfinite(last_train_loss):
                 raise RuntimeError(f"Non-finite training loss at step {step}")
 
             val_loss = val_ppl = None
-            if elapsed < args.time_limit_seconds and elapsed >= next_eval:
+            reached_steps = max_steps is not None and step >= max_steps
+            if not reached_steps and elapsed < args.time_limit_seconds and elapsed >= next_eval:
                 val_loss, val_ppl, _ = evaluate_model(
                     model, val_tokens, val_batches, args.block_size, device, precision)
                 if not math.isfinite(val_loss):
@@ -247,7 +289,7 @@ def train_model(settings):
                     next_eval += args.eval_interval_seconds
             elapsed = time.perf_counter() - loop_start
             if (step % args.log_interval_steps == 0 or val_loss is not None
-                    or elapsed >= args.time_limit_seconds):
+                    or reached_steps or elapsed >= args.time_limit_seconds):
                 row = {
                     "step": step, "elapsed_seconds": round(elapsed, 3),
                     "train_loss": last_train_loss, "val_loss": val_loss,
@@ -259,6 +301,9 @@ def train_model(settings):
                 writer.writerow(row)
                 csv_file.flush()
                 print(row, flush=True)
+            if reached_steps:
+                stop_reason = "max_steps"
+                break
             if time.perf_counter() - loop_start >= args.time_limit_seconds:
                 break
     training_elapsed = time.perf_counter() - loop_start
@@ -287,12 +332,20 @@ def train_model(settings):
         "model": model.state_dict(), "model_config": asdict(config),
         "optimizer": optimizer.state_dict(), "seed": args.seed,
         "elapsed_seconds": training_elapsed, "tokens_processed": tokens_processed,
+        "step": step, "stop_reason": stop_reason,
         "run_config": run_config,
     }
     temporary = out_dir / "checkpoint.pt.tmp"
     torch.save(checkpoint, temporary)
     os.replace(temporary, out_dir / "checkpoint.pt")
     save_seconds = time.perf_counter() - save_start
+    summary = {"steps": step, "tokens_processed": tokens_processed,
+               "stop_reason": stop_reason, "training_seconds": training_elapsed,
+               "final_validation_seconds": final_eval_seconds, "checkpoint_save_seconds": save_seconds,
+               "val_loss": final_loss, "val_perplexity": final_ppl}
+    (out_dir / "training_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
+    if max_steps is not None and step < max_steps:
+        print(f"WARNING: time cap reached before {max_steps:,} steps; this is NOT a completed equal-token run.", flush=True)
     print(f"Training: {step} steps, {tokens_processed:,} tokens in {training_elapsed:.2f}s. "
           f"Checkpoint: {out_dir / 'checkpoint.pt'} (save took {save_seconds:.2f}s)", flush=True)
 

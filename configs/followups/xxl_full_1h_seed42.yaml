@@ -1,4 +1,4 @@
-# Proposed follow-up; not run automatically. See NEXT_STEPS_GUIDE.md.
+# Fresh run; fixed data/evaluation seeds. See FOLLOWUP_COMMANDS.md.
 experiment:
   name: xxl_full_1h_seed42
   seed: 42
@@ -11,7 +11,8 @@ data:
   train_stories: null
   validation_stories: null
   test_stories: null
-  cache_dir: data/tinystories/data100
+  cache_dir: data/tokens-full
+  preparation_seed: 42
 tokenizer:
   name: gpt2
 model:
@@ -27,6 +28,7 @@ training:
   microbatch_size: 4
   gradient_accumulation_steps: 4
   log_interval_steps: 10
+  max_steps: null
 optimizer:
   learning_rate: 0.0003
   weight_decay: 0.1
@@ -37,11 +39,15 @@ optimizer:
 schedule:
   warmup_fraction: 0.02
   min_lr_ratio: 0.1
+  progress: time
 evaluation:
   interval_seconds: 300
   batches: 64
+  microbatch_size: 4
+  seed: 43
 generation:
   prompt: Once upon a time
   max_new_tokens: 100
   temperature: 0.8
   top_k: 40
+  seed: 101

@@ -13,7 +13,7 @@ def generate_text(settings, checkpoint_path, prompt=None):
         raise ValueError("Generation prompt must not be empty")
     device = select_device(settings["training"]["device"])
     model, checkpoint = load_checkpoint_model(checkpoint_path, device)
-    torch.manual_seed(checkpoint["seed"])
+    torch.manual_seed(generation.get("seed", checkpoint["seed"]))
     saved_config = checkpoint["run_config"]
     tokenizer_name = (saved_config["tokenizer"]["name"] if "tokenizer" in saved_config
                       else "gpt2")
@@ -22,8 +22,11 @@ def generate_text(settings, checkpoint_path, prompt=None):
                              dtype=torch.long, device=device)
     output_ids = model.generate(input_ids, generation["max_new_tokens"],
                                 temperature=generation["temperature"],
-                                top_k=generation["top_k"])
-    output = tokenizer.decode(output_ids[0].tolist())
+                                top_k=generation["top_k"], eos_token_id=tokenizer.eot_token)
+    ids = output_ids[0].tolist()
+    if ids[-1] == tokenizer.eot_token:
+        ids.pop()
+    output = tokenizer.decode(ids)
     print(output)
     return output
 

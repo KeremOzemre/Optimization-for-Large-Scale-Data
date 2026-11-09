@@ -2,6 +2,7 @@
 % Small-LLM challenge report. Course Overleaf template (12pt, natbib, libertine).
 % Figures are in report/figures/; bibliography in report/references.bib.
 \documentclass[12pt]{article}
+\usepackage[T1]{fontenc}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%% YOU PROBABLY DON"T NEED TO CHANGE ANYTHING HERE %%%%%%%%%%%%%%%%%%%
@@ -24,8 +25,9 @@
 \Urlmuskip=0mu plus 1mu\relax      % let URLs flex so they do not overrun
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\author{}
 \title{Training a small GPT on TinyStories under a one-hour budget:
-a compute-optimal sweet spot}
+model size, token exposure, and comparison limits}
 \date{\today}
 
 \begin{document}
@@ -34,39 +36,38 @@ a compute-optimal sweet spot}
 
 {\bf Group Composition:}
 \begin{enumerate}
-\item Lara Muy Steffany Mishell (Steffany Lara), A0350565H, [NUS email]
-\item Kerem Ozemre, A0[fill], [NUS email]
-\item Kowalke Jeri Tonio Janek (Tonio Kowalke), A0[fill], [NUS email]
-\item Haj Hassine Ahmed Ben Abdellaziz (Ahmed Haj Hassine), A0[fill], [NUS email]
+\item Lara Muy Steffany Mishell (Steffany Lara), A0350565H
+\item Kerem Ozemre
+\item Kowalke Jeri Tonio Janek (Tonio Kowalke)
+\item Haj Hassine Ahmed Ben Abdellaziz (Ahmed Haj Hassine)
 \end{enumerate}
 
 {\bf Github Repository:}
 \href{https://github.com/KeremOzemre/Optimization-for-Large-Scale-Data}{github.com/KeremOzemre/\allowbreak Optimization-for-Large-Scale-Data}
 
 \begin{abstract}
-We trained 20 nanoGPT language models on TinyStories from random weights, each for
-one hour on the same GPU: five model sizes (16 to 253M parameters) crossed with four
-training-data fractions (25/50/75/100\% of the training split). The tokenizer,
-optimizer, schedule, context length, and effective batch were held fixed, so the
-only things that changed were model size and how much data each run could draw from.
-Validation loss drops steeply from \texttt{small} to \texttt{xl} ($\approx$124M
-parameters) and then gets slightly worse again at \texttt{xxl} ($\approx$253M). The
-reason is simple once you look at throughput: \texttt{xxl} is so slow that it only
-gets through about half as many tokens in the hour, so it stays undertrained. The
-data fraction barely moves the loss, because no run gets through even 25\% of the
-split in the time it has. Picking the best model by validation loss gives
-\texttt{xl\_data50} (val loss 1.5025, perplexity 4.49); on the untouched test split
-it reaches loss 1.4846, perplexity 4.41, and 0.524 bits per byte.
+We trained 20 nanoGPT models from random weights on TinyStories, each for one hour
+on an H100 MIG slice: five sizes (16--253M parameters) crossed with four data
+fractions (25/50/75/100\%). XL ($\approx$124M) has the lowest recorded validation
+loss among the tested families under this shared recipe. XXL processes about half
+as many tokens. This is a conditional fixed-time result; reduced exposure is a
+hypothesis for the ranking, not an established cause. Full-data exposure ranges
+from 0.303 to 2.077 cache-equivalents, with no guarantee of unique coverage.
+The original validation-selected \texttt{xl\_data50} has test loss 1.4846 and
+perplexity 4.41. Unequal validation samples and one training seed limit close
+comparisons. Common validation scoring, repeated seeds, longer budgets, and
+equal-token comparisons are prepared but have no follow-up results yet.
 \end{abstract}
+
 
 \section{Compute budget declaration}
 Every model starts from random weights (nanoGPT initialisation, with no pretrained
-weights, embeddings, or tokenizer fine-tuning) and trains for exactly one hour
+weights, embeddings, or tokenizer fine-tuning) and trains for approximately one hour
 (3600\,s) of in-loop wall-clock per model. Data preparation, the final validation
 pass, and checkpointing all happen outside that timed loop. All 20 runs use the same
 hardware: a single NVIDIA H100 NVL MIG 3g.47gb slice in \texttt{bfloat16}. The same
 hour of wall-clock does not buy the same number of tokens for every size, and that
-gap turns out to drive our main result (\S\ref{sec:results}).
+gap is central to interpreting our result (\S\ref{sec:results}).
 
 \section{Research question}
 Which model size and training-data fraction give the best language-modeling
@@ -78,8 +79,8 @@ vary only (a) model size and (b) the fraction of the training split used.
 \begin{itemize}
   \item \textbf{Data:} \texttt{roneneldan/TinyStories}. We train on the official
         train split, and split the official validation set 80/20 into validation and
-        test at the story level (seed 42). The test split is only touched once, for
-        the final comparison (\S\ref{sec:test}).
+        test at the story level (seed 42). All 20 archived test results have been inspected;
+        future model choices use validation (\S\ref{sec:test}).
   \item \textbf{Tokenizer:} GPT-2 (\texttt{tiktoken}), vocabulary 50{,}257, with an
         end-of-text token after every story. Since the tokenizer never changes,
         per-token cross-entropy and perplexity are directly comparable across all our
@@ -95,7 +96,7 @@ vary only (a) model size and (b) the fraction of the training split used.
         with seed 42 keeps any single story from leaking between validation and test.
 \end{itemize}
 
-\begin{table}[h]
+\begin{table}[htbp]
   \centering
   \caption{The five model sizes. Width divides evenly by the head count; context
   length (256) and dropout (0.1) are shared. We adjust microbatch and accumulation to
@@ -125,25 +126,31 @@ The exact commands are in the repository README; the pipeline is five steps.
 \begin{enumerate}
   \item \texttt{run.py prepare} builds (or reuses) the token cache for a given data
         fraction.
-  \item \texttt{create\_experiments.py} writes the per-run configs under
-        \texttt{configs/experiments/} from the baseline YAML.
+  \item Archived \texttt{run\_config.json} files record the actual settings;
+        checked-in YAMLs provide runnable configurations.
   \item \texttt{run.py train} trains one config; its outputs
         (\texttt{run\_config.json}, \texttt{metrics.csv}, \texttt{checkpoint.pt}) land
         in \texttt{results/}. Checkpoints and logs are mirrored to the Hugging Face
         Hub (\texttt{dsa4212-tinystories}).
-  \item We pick the model on \emph{validation} loss, and only then score the chosen
-        one on \emph{test}.
+  \item The original selection used \emph{validation} loss; all 20 test scores
+        were subsequently exported and inspected.
   \item \texttt{eval\_hf.py} downloads every checkpoint and scores the full test
         split; \texttt{analyze.py} then aggregates all runs into \texttt{analysis/}
         (the tables and figures below).
 \end{enumerate}
+
+\paragraph{Validation protocol limitation.}
+Original validation used 16 microbatches: 65{,}536 targets for Small/Medium/Large,
+32{,}768 for XL, and 16{,}384 for XXL. Close gaps require common-target scoring.
+New follow-ups score $4\times64\times256=65{,}536$ targets with a fixed evaluation
+seed, independent of training randomness.
 
 \section{Results}\label{sec:results}
 Table~\ref{tab:results} lists all 20 runs sorted by final validation loss, the metric
 we select on. We read three things off these runs, shown in
 Figures~\ref{fig:curves}--\ref{fig:tension}.
 
-\begin{table}[h]
+\begin{table}[htbp]
   \centering
   \caption{All 20 runs, sorted by final validation loss (the selection metric).
   ``Tokens'' is how many training tokens the run actually processed inside the
@@ -179,182 +186,181 @@ Figures~\ref{fig:curves}--\ref{fig:tension}.
   \end{tabular}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=0.75\linewidth]{analysis/val_loss_curves.png}
-  \caption{Validation loss over training time. The smaller models drop fastest early
-  on, since they fit many more steps per second, and then flatten. \texttt{xl} and
-  \texttt{xxl} start higher but pass the smaller models and are still coming down at
-  the one-hour mark, which says they are limited by compute rather than converged.}
+  \caption{Original validation loss curves. Late improvements do not establish
+  convergence. Validation sample sizes differ by model family.}
   \label{fig:curves}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=0.49\linewidth]{analysis/val_loss_vs_params.png}
   \includegraphics[width=0.49\linewidth]{analysis/val_loss_vs_data.png}
-  \caption{Left: final validation loss against model size, one line per data fraction.
-  Loss falls steeply from \texttt{small} through \texttt{xl}, then ticks back up at
-  \texttt{xxl}, leaving a sweet spot near 124M parameters. Right: loss against data
-  fraction, one line per size. The lines are almost flat; within each size the four
-  fractions differ by about 0.01 nats, and not even in a consistent direction.}
+  \caption{Recorded final validation losses by model size and data fraction.
+  Close differences require common-target scoring and repeated training seeds.}
   \label{fig:sizedata}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=0.49\linewidth]{analysis/val_loss_vs_tokens.png}
   \includegraphics[width=0.49\linewidth]{analysis/throughput_vs_params.png}
-  \caption{Throughput against tokens seen in the hour. Right: throughput collapses as
-  the model grows, from about 270k tokens/s for \texttt{small} down to about 40k for
-  \texttt{xxl}. Left: so the larger models get through far fewer tokens in the same
-  hour (about 985M for \texttt{small} versus 144M for \texttt{xxl}, roughly 7 times
-  fewer), yet still reach lower loss per token, right up until \texttt{xxl}, where too
-  few tokens finally cost more than the extra capacity is worth.}
+  \caption{Processed targets and throughput under the original one-hour budget.
+  Larger models process fewer targets; these plots do not isolate the cause of loss differences.}
   \label{fig:tension}
 \end{figure}
 
-\paragraph{(1) A compute-optimal sweet spot.} Bigger helps, with sharply diminishing
-returns, and then stops helping. Validation loss falls $1.84\to1.64\to1.55\to1.50$
-from \texttt{small} to \texttt{xl}, but the best \texttt{xxl} run (1.5106) comes out
-above the best \texttt{xl} run (1.5025). \texttt{xxl} has about twice the parameters
-of \texttt{xl} and runs at roughly half the throughput, so it only sees about 144M
-tokens in the hour against 274M for \texttt{xl}, and never finishes training
-(Fig.~\ref{fig:tension}). This is the compute-optimal picture of Hoffmann et
-al.~\cite{hoffmann2022}: for a fixed compute budget there is a best model size, and
-going past it spends the budget on parameters that never see enough tokens.
+\paragraph{Best observed size under the shared recipe.}
+Validation loss falls approximately $1.84\to1.64\to1.55\to1.50$ from
+\texttt{small} to \texttt{xl}. The best recorded XXL loss is 1.5106, compared with
+1.5025 for XL. XXL has about twice as many parameters and processes roughly half
+as many targets. Reduced exposure, optimizer suitability, and training randomness
+are possible explanations; this experiment does not distinguish them. Related
+compute-allocation work motivates these hypotheses~\cite{hoffmann2022}, but our
+five sizes and one seed do not establish a scaling law or precise optimal size.
 
-\paragraph{(2) The data fraction barely matters.} Within each size the four fractions
-differ by about 0.01 nats, and not monotonically (Fig.~\ref{fig:sizedata}, right). The
-reason is in Table~\ref{tab:results}: no run processes more than about 985M tokens,
-and even the 25\% subset of TinyStories holds far more tokens than that. Training
-samples windows with replacement, so it never gets all the way through even the
-smallest subset. These runs are limited by compute, not by how much data they are
-allowed to touch.
+\paragraph{Small observed data-fraction effects.}
+Within a family the observed spread is about 0.007--0.014 nats, without a consistent
+monotonic pattern. The 25\% cache has 118{,}450{,}614 tokens and the full cache
+473{,}992{,}236. The earlier claim that no run processed as many tokens as the
+smallest cache was incorrect: several runs processed multiple cache-equivalents.
+A redundant or homogeneous corpus could contribute to the weak fraction effect,
+but its cause and stability across seeds are not established.
 
-\paragraph{(3) Test agrees with validation.} The test ordering follows the validation
-ordering (Table~\ref{tab:results}). The full-split test losses come out a touch lower
-than validation, because test is scored over all 957{,}184 held-out tokens while
-in-loop validation only sampled a fixed set of windows.
+\subsection{Token exposure audit}
+All 262{,}432 logged counters match completed optimizer steps times microbatch,
+accumulation, and context length. Table~\ref{tab:exposure} shows full-data runs.
+Sampling is with replacement: equivalents count repeated targets and do not certify
+an epoch or unique coverage. Time estimates assume the original measured throughput.
 
-\subsection{Final test result}\label{sec:test}
-Selecting on validation loss alone gives \texttt{xl\_data50} (val loss 1.5025,
-perplexity 4.49). Scored once on the untouched test split, it gets \textbf{test loss
-1.4846, perplexity 4.41, and 0.5237 bits per byte}. The whole \texttt{xl} family is
-really within noise of each other (val 1.5025--1.5118; the 0.004 by which
-\texttt{data50} edges \texttt{data100} is run-to-run jitter), so the honest reading is
-``\texttt{xl} at around 124M parameters, at any data fraction'' rather than 50\%
-specifically.
+\begin{table}[htbp]
+\centering
+\caption{Full-cache exposure and estimated time for one equivalent.}
+\label{tab:exposure}
+\begin{tabular}{lrrl}
+\toprule
+Model & Targets (M) & Equivalents & Time for one equivalent \\
+\midrule
+Small & 984.326 & 2.077 & 28m 54s \\
+Medium & 734.642 & 1.550 & 38m 43s \\
+Large & 562.430 & 1.187 & 50m 34s \\
+XL & 279.831 & 0.590 & 1h 42m \\
+XXL & 143.655 & 0.303 & 3h 18m \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\subsection{Qualitative evaluation}
-The generated stories (temperature 0.8, top-$k$ 40; full samples in the appendix)
-line up with the metrics but flatten the gaps. Even \texttt{small} writes
-grammatical, on-topic TinyStories. What size buys is coherence over a longer span:
-the \texttt{xl} winner keeps one plot and a stable cast across a whole paragraph,
-while \texttt{small} tends to loop (``painted a dog, and a dog'') or lose the thread.
-The samples back up the held-out numbers; they do not stand in for them.
+\subsection{Archived test results}\label{sec:test}
+The original validation selection gives \texttt{xl\_data50}, with test loss 1.4846,
+perplexity 4.41, and 0.5237 bits per byte. Full-data XL has test loss 1.4824;
+full-data XXL has 1.5174. All 20 test scores have subsequently been inspected.
+They must be disclosed as exploratory comparisons; future adaptive decisions use
+validation and cannot treat this test set as fresh confirmation. The archived
+full-test protocol scores 957{,}184 targets and drops a short tail. The new full
+evaluator includes the tail and records that protocol change.
 
-\subsection{Estimating the compute-optimal size}
-Using only the runs we already have, we estimate each run's training compute with the
-usual approximation $C \approx 6ND$ ($N$ parameters, $D$ tokens processed). Fitting a
-parabola to the best validation loss per size in $\log_{10}(\text{parameters})$
-(Fig.~\ref{fig:optfit}, left) puts the minimum, the compute-optimal size for a
-one-hour budget on this hardware, at $N^\star \approx 130$M parameters. That lands
-right on our empirical winner \texttt{xl} (124M). The loss-against-compute view
-(Fig.~\ref{fig:optfit}, right) shows a second effect: even though every run got the
-same hour of wall-clock, the compute it actually delivered grows with size (about
-$9\times10^{16}$ FLOPs for \texttt{small} up to about $2.2\times10^{17}$ for
-\texttt{xxl}), because the smallest models leave the GPU half-idle. So \texttt{small}
-loses twice over: less capacity, and less compute squeezed out of the same hour.
+We have no training repeats supporting a claim that fraction differences are
+``within noise'' or statistically indistinguishable. Equal tokenization makes CE
+comparable as an objective, but identical targets and context policy are also needed
+for a close numerical comparison.
 
-\begin{figure}[h]
+\subsection{Qualitative observations}
+Existing examples show fluent TinyStories-style text even from smaller models.
+Some XL examples appear more coherent, but the five-prompt, single-sample,
+unblinded inspection is illustrative rather than a quantified capability result.
+Frozen prompts, two generation seeds, blind rating sheets, and paired color-tracking
+probes are prepared. These narrow probes do not establish general reasoning ability.
+
+\subsection{Exploratory size and compute plots}
+The proxy $C\approx6ND$ uses parameter count $N$ and processed targets $D$; it is
+not a hardware measurement. It does not establish GPU utilization. A quadratic
+fit to five size-level losses is descriptive and depends on the functional form,
+single seed, evaluation samples, and chosen points. The updated fit uses 100\% data
+for every size; its vertex is not evidence of a compute-optimal parameter count.
+
+\begin{figure}[htbp]
   \centering
   \includegraphics[width=0.49\linewidth]{analysis/compute_optimal_fit.png}
   \includegraphics[width=0.49\linewidth]{analysis/loss_vs_compute.png}
-  \caption{Left: best validation loss per size against parameters, with a quadratic
-  fit in log-parameters whose vertex estimates the compute-optimal size
-  ($N^\star\approx130$M) for the one-hour budget, within noise of the empirical winner
-  \texttt{xl}. Right: loss against estimated compute $C\approx6ND$; the smallest
-  models deliver the least compute despite the identical wall-clock budget. The fit
-  rests on five points, so read it as indicative, not precise.}
+  \caption{Descriptive size fit on full-data runs and the approximate $6ND$ proxy.
+  Neither panel establishes an optimal size, a scaling law, or measured GPU utilization.}
   \label{fig:optfit}
 \end{figure}
 
-\subsection{Varying the budget and the context length}
-The main grid holds two things fixed that are worth poking at: the one-hour budget
-and the 256-token context. We changed each on its own.
+\subsection{Additional budget and context runs: exploratory}
+The 30-minute Large, XL, and XXL runs have recorded validation losses 1.580, 1.633,
+and 1.680. Large has the lowest recorded value in that group; XL leads at one hour.
+However, the additional runs record \texttt{NVIDIA H100 NVL}, while the main grid
+records \texttt{NVIDIA H100 NVL MIG 3g.47gb}. Validation sample sizes also differ.
+This does not isolate a causal budget effect. The updated budget plot fixes the
+data fraction at 100\%, but hardware still needs reconciliation.
 
-\paragraph{Budget.} If the best size really comes out of the budget, then a smaller
-budget should want a smaller model. We reran \texttt{large}, \texttt{xl}, and
-\texttt{xxl} at 30 minutes instead of an hour. The winner moves. At 30 minutes
-\texttt{large} (51M) takes the lead with validation loss 1.580, ahead of \texttt{xl}
-(1.633) and \texttt{xxl} (1.680), whereas at a full hour \texttt{xl} was best
-(Fig.~\ref{fig:budget}). Halving the clock pulls the best size down from 124M to 51M,
-which is what the compute-optimal view predicts: fewer tokens to spend, so a smaller
-and faster model spends them better. We compare on validation loss here, since it is
-measured the same way for every run.
+The XL 512-token-context run records validation loss 1.4555 versus 1.5068 for the
+256-token full-data baseline, and processes 190M versus 280M targets. Besides the
+hardware label, effective targets per optimizer step change from 4096 to 8192 and
+validation windows change. The observed difference cannot be attributed solely to context.
 
-\paragraph{Context length.} Keeping \texttt{xl} and the one-hour budget, we raised the
-context from 256 to 512 tokens. Validation loss falls from 1.5068 to 1.4555 (test
-perplexity from 4.40 to 4.31), even though the longer-context run gets through fewer
-tokens in the hour (190M against 280M). On TinyStories the extra context pays for
-itself.
-
-\begin{figure}[h]
+\begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.62\linewidth]{analysis/budget_sweep.png}
-  \caption{Best validation loss per size at two budgets. At one hour the minimum sits
-  at \texttt{xl} (124M); at 30 minutes it moves to \texttt{large} (51M). A tighter
-  budget prefers a smaller model.}
+  \includegraphics[width=0.65\linewidth]{analysis/budget_sweep.png}
+  \caption{Exploratory recorded losses at two budgets, with 100\% data. Different
+  hardware labels and validation samples prevent a controlled budget interpretation.}
   \label{fig:budget}
 \end{figure}
 
-\section{Discussion}
-The winner wins because it sits where capacity and tokens balance for this budget: big
-enough to hold what the smaller models cannot, small enough to still see enough tokens
-in an hour to use that capacity. The whole experiment is compute-bound. Throughput,
-not how much data is on hand, is the binding constraint, which is why the data
-fraction hardly moves the loss and why \texttt{xxl} lands below \texttt{xl}. Give it a
-bigger budget and we would expect the left panel of Fig.~\ref{fig:sizedata} to keep
-bending to the right: \texttt{xxl} and larger should eventually pass \texttt{xl} once
-they get enough tokens, and the data fraction should start to bite once a run can
-actually finish a subset. The 30-minute runs show the mirror image: cut the budget
-and the best size has already dropped to \texttt{large} (Fig.~\ref{fig:budget}),
-and a longer context helps \texttt{xl} even though it costs tokens. A few caveats. Training samples windows with replacement, so
-an hour guarantees neither a full epoch nor unique coverage. The single shared recipe
-(learning rate, warmup, batch) is not tuned per size and may help some sizes more than
-others. Validation used sampled windows rather than the full test-time pass. And the
-TinyStories source revision is not pinned.
+\section{Discussion and limitations}
+The grid addresses a practical question about a fixed-time training recipe. Equal
+time intentionally allows different token exposure and does not invalidate that
+question. It does limit claims about intrinsic capacity, convergence, or performance
+at equal exposure. Whether XXL overtakes XL with more training remains open.
+
+Only one training seed was used. The optimizer recipe was not tuned per size;
+validation samples differed by family; windows were sampled with replacement;
+the dataset revision was not pinned; and all 20 test scores have been inspected.
+These limitations cannot be resolved from learning curves alone.
+
+\subsection{Follow-ups prepared; results pending}
+Exact commands are in \texttt{FOLLOWUP\_COMMANDS.md}. None of the following has
+produced follow-up research results yet:
+\begin{enumerate}
+\item Score archived Large/full, XL/50\%, XL/full, and XXL/full checkpoints on
+identical validation targets. Save paired story-level losses and conditional bootstrap intervals.
+\item Train XL and XXL on full data for one hour with seeds 42, 43, and 44
+(six model-hours). Report individual scores and training-seed variability.
+\item Train a fresh XL/XXL pair for four hours each (eight model-hours). The
+learning-rate schedule stretches with the budget; these are not checkpoint continuations.
+\item Optionally compare both models at 115{,}721 updates, or 473{,}993{,}216
+targets, with step-based schedules. A six-hour safety cap marks early stops as incomplete;
+equal targets still do not guarantee an epoch.
+\item Generate two samples for each of 20 frozen prompts, use two blind raters,
+and run paired color-tracking probes. Keep these exploratory results separate from CE.
+\end{enumerate}
+New configs fix preparation seed 42, evaluation seed 43, and 65{,}536 in-loop
+validation targets independently of the training seed. Training records code and
+cache hashes, package versions, actual hardware, targets, and stop reason.
+Story-resampling intervals condition on fixed checkpoints and do not replace
+training repeats. Three seeds are an initial variability check, not a precise
+uncertainty guarantee. Four-hour and equal-token comparisons answer different questions.
 
 \section{Conclusion}
-Under a fixed one-hour, from-scratch budget on one H100 MIG slice, the best language
-model on TinyStories is \texttt{xl} at around 124M parameters; chosen on validation,
-\texttt{xl\_data50} reaches test perplexity 4.41 (0.524 bits/byte). The trade-off that
-matters most is throughput against capacity: because a bigger model gets through far
-fewer tokens in the same wall-clock time, going bigger stops paying off, and then
-backfires, well before the largest model we trained. How much training data a run is
-allowed to touch makes almost no difference once you are this compute-bound.
+XL is the best observed family among the tested one-hour configurations under the
+shared recipe. The original validation-selected model reaches test perplexity 4.41.
+This supports a bounded fixed-time observation, rather than a universal claim that
+larger models are better or a precise compute-optimal size. Data-fraction effects
+are small in the recorded single-seed runs. Their stability, the cause of the
+XL--XXL difference, and longer-budget or equal-token behavior remain to be tested.
+Pending experiments are not evidence for the current conclusion.
 
 \bibliographystyle{plainnat}
 \bibliography{references}
 
 \appendix
 \section{Generated story samples}
-The full set of samples for all 20 runs (five prompts each) lives in
-\texttt{analysis/\allowbreak generations\_all.md}. As one example, both models continue
-``\emph{Once upon a time}'' fluently, but the \texttt{xl} winner holds a longer, more
-consistent story:
-
-\paragraph{\texttt{small\_data25}.} \emph{``Once upon a time, there was a little girl
-named Lily. Lily loved to play with her toys\ldots She painted a picture of a flower
-and a house\ldots Later that day, Lily's mom asked her to help. Lily was happy to help
-and started to decorate the room with pretty flowers.''} (The thread loops back on
-itself.)
-
-\paragraph{\texttt{xl\_data50} (selected).} \emph{``Once upon a time, there was a
-little girl named Lily. Lily loved to play with her toys, especially her teddy bear.
-One day, Lily's mommy asked her to help decorate the house for a party\ldots `Mommy,
-can I carry my teddy bear?' she asked\ldots They arrived at the living room and Lily's
-mommy gave her a big box of presents.''} (One plot, moving forward.)
+The original five-prompt samples for all 20 runs are in
+\path{analysis/generations_all.md}. These examples were inspected without
+blinding and are illustrative, not a scored capability benchmark.
+New blind samples and ratings are pending.
 
 \end{document}

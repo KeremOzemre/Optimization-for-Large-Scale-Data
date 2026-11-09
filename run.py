@@ -10,15 +10,15 @@ import yaml
 CONFIG_KEYS = {
     "experiment": {"name", "seed", "output_dir"},
     "data": {"dataset", "train_split", "heldout_split", "test_ratio",
-             "train_stories", "validation_stories", "test_stories", "cache_dir"},
+             "train_stories", "validation_stories", "test_stories", "cache_dir", "preparation_seed"},
     "tokenizer": {"name"},
     "model": {"layers", "width", "heads", "context_length", "dropout"},
     "training": {"device", "precision", "time_limit_seconds", "microbatch_size",
-                 "gradient_accumulation_steps", "log_interval_steps"},
+                 "gradient_accumulation_steps", "log_interval_steps", "max_steps"},
     "optimizer": {"learning_rate", "weight_decay", "betas", "gradient_clip"},
-    "schedule": {"warmup_fraction", "min_lr_ratio"},
-    "evaluation": {"interval_seconds", "batches"},
-    "generation": {"prompt", "max_new_tokens", "temperature", "top_k"},
+    "schedule": {"warmup_fraction", "min_lr_ratio", "progress"},
+    "evaluation": {"interval_seconds", "batches", "microbatch_size", "seed"},
+    "generation": {"prompt", "max_new_tokens", "temperature", "top_k", "seed"},
 }
 
 
@@ -40,6 +40,16 @@ def load_config(path):
         raise ValueError("Configuration must be a YAML mapping")
     if set(config) != set(CONFIG_KEYS):
         raise ValueError(f"Configuration sections must be: {', '.join(CONFIG_KEYS)}")
+    if any(not isinstance(config[key], dict) for key in CONFIG_KEYS):
+        raise ValueError("Each configuration section must be a YAML mapping")
+    # Preserve the behavior of archived YAMLs; new follow-ups set these explicitly.
+    seed = config["experiment"].get("seed", 42)
+    config["data"].setdefault("preparation_seed", seed)
+    config["training"].setdefault("max_steps", None)
+    config["schedule"].setdefault("progress", "time")
+    config["evaluation"].setdefault("microbatch_size", config["training"].get("microbatch_size", 16))
+    config["evaluation"].setdefault("seed", seed + 1 if type(seed) is int else 43)
+    config["generation"].setdefault("seed", seed)
     for section, fields in CONFIG_KEYS.items():
         if not isinstance(config[section], dict) or set(config[section]) != fields:
             raise ValueError(f"{section} needs exactly these fields: {', '.join(sorted(fields))}")
@@ -53,6 +63,10 @@ def load_config(path):
         raise ValueError("experiment.output_dir must be nonempty")
     if type(experiment["seed"]) is not int or experiment["seed"] < 0:
         raise ValueError("experiment.seed must be a nonnegative integer")
+    for section in ("data", "evaluation", "generation"):
+        field = "preparation_seed" if section == "data" else "seed"
+        if type(config[section][field]) is not int or config[section][field] < 0:
+            raise ValueError(f"{section}.{field} must be a nonnegative integer")
     if data["dataset"] != "roneneldan/TinyStories":
         raise ValueError("Only roneneldan/TinyStories is supported")
     if (not isinstance(data["train_split"], str)
@@ -81,6 +95,12 @@ def load_config(path):
     positive_number(training["time_limit_seconds"], "training.time_limit_seconds")
     for field in ("microbatch_size", "gradient_accumulation_steps", "log_interval_steps"):
         positive_integer(training[field], f"training.{field}")
+    if training["max_steps"] is not None:
+        positive_integer(training["max_steps"], "training.max_steps")
+    if schedule["progress"] not in ("time", "steps"):
+        raise ValueError("schedule.progress must be time or steps")
+    if schedule["progress"] == "steps" and training["max_steps"] is None:
+        raise ValueError("schedule.progress=steps requires training.max_steps")
     positive_number(optimizer["learning_rate"], "optimizer.learning_rate")
     if not isinstance(optimizer["weight_decay"], (int, float)) or optimizer["weight_decay"] < 0:
         raise ValueError("optimizer.weight_decay cannot be negative")
@@ -98,6 +118,7 @@ def load_config(path):
         raise ValueError("schedule.min_lr_ratio must be in (0, 1]")
     positive_number(evaluation["interval_seconds"], "evaluation.interval_seconds")
     positive_integer(evaluation["batches"], "evaluation.batches")
+    positive_integer(evaluation["microbatch_size"], "evaluation.microbatch_size")
     if not isinstance(generation["prompt"], str) or not generation["prompt"]:
         raise ValueError("generation.prompt must be nonempty")
     if type(generation["max_new_tokens"]) is not int or generation["max_new_tokens"] < 0:

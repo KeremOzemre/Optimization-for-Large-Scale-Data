@@ -1,8 +1,9 @@
 """Figures for the two extra experiments: budget sweep and context length.
 
-Budget sweep: best validation loss per size at the one-hour budget (from
+Budget sweep: full-data validation loss per size at the one-hour budget (from
 analysis/summary.csv) versus the 30-minute budget (runs/{large,xl,xxl}_t1800),
-to show the optimal size moving. Context length is just two numbers, printed.
+as an exploratory comparison. Hardware labels and validation samples differ,
+so the plot cannot isolate a causal budget or context effect.
 
 Usage:
     python analyze_additions.py
@@ -29,9 +30,9 @@ def final_val(run):
     return float(m["val_loss"].dropna().iloc[-1])
 
 
-# One-hour budget: best validation loss per size across the four data fractions.
+# Compare the same full-data fraction at both budgets.
 summary = pd.read_csv(OUT / "summary.csv")
-hour = (summary.sort_values("final_val_loss").groupby("size").first()["final_val_loss"])
+hour = summary[summary["data_pct"] == 100].set_index("size")["final_val_loss"]
 hour = {s: hour[s] for s in PARAMS if s in hour.index}
 
 # 30-minute budget: the three sizes we reran.
@@ -51,15 +52,15 @@ for label, data, color in [("1 h budget", hour, "C0"), ("30 min budget", half, "
                 textcoords="offset points", xytext=(6, 10), color=color)
 ax.set_xscale("log")
 ax.set_xlabel("Parameters (millions)")
-ax.set_ylabel("Best final validation loss")
-ax.set_title("The best size shrinks when the budget shrinks")
+ax.set_ylabel("Recorded final validation loss")
+ax.set_title("Exploratory budgets: hardware labels / validation samples differ")
 ax.legend()
 ax.grid(True, alpha=0.3)
 fig.tight_layout()
 fig.savefig(OUT / "budget_sweep.png", dpi=150)
 plt.close(fig)
 
-print("1 h budget (best val per size):", {k: round(v, 4) for k, v in hour.items()})
+print("1 h budget (100% data):", {k: round(v, 4) for k, v in hour.items()})
 print("30 min budget (val):          ", {k: round(v, 4) for k, v in half.items()})
 print(f"  best @1h  = {min(hour, key=hour.get)}")
 print(f"  best @30m = {min(half, key=half.get)}")

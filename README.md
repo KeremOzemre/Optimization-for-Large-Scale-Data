@@ -14,7 +14,7 @@ python -m pip install -r requirements.txt
 
 ## Configure an experiment
 
-For a staged plan to strengthen the existing results, see [NEXT_STEPS_GUIDE.md](NEXT_STEPS_GUIDE.md), including proposed confirmation configs, evaluation checks, and code prerequisites for independent-seed or equal-token studies.
+For the ready follow-up YAMLs and exact commands, use [FOLLOWUP_COMMANDS.md](FOLLOWUP_COMMANDS.md). Start with common validation scoring and the six one-hour XL/XXL seed trials; four-hour and equal-token runs are optional. The tools are implemented and locally checked, but the follow-up research results are pending. [NEXT_STEPS_GUIDE.md](NEXT_STEPS_GUIDE.md) explains why these comparisons matter.
 
 See [CONFIGURATION.md](CONFIGURATION.md) for a table explaining every setting, its allowed values, and its effect.
 
@@ -52,7 +52,9 @@ python run.py generate --config configs/default.yaml --prompt "Once upon a time"
 
 `prepare` loads `roneneldan/TinyStories` with Hugging Face Datasets, splits its official validation stories deterministically into validation and test, and uses the GPT-2 tokenizer from `tiktoken`. It appends an end-of-text token after every story and writes `train.bin`, `val.bin`, `test.bin`, and `meta.json`. The model vocabulary size is derived from the tokenizer (50,257 for GPT-2). The test split stays separate from training and validation.
 
-`train` samples random token windows from `train.bin`. Each window predicts the next token at every position, with causal attention. It uses AdamW and a time-based warmup and cosine learning-rate schedule. The default budget is 3,600 seconds **inside the training loop**, including periodic validation and logging. The current optimizer step finishes when the limit is reached. Dataset preparation, model setup, final validation, and checkpoint saving are outside this budget. An epoch is not guaranteed because windows are sampled with replacement.
+`train` samples random token windows from `train.bin`, predicting shifted next tokens with causal attention. The default AdamW schedule warms up and decays over 3,600 seconds **inside the training loop**, including periodic validation/logging. The current optimizer step finishes when the limit is reached. Preparation, initialization, final validation, and saving are outside the budget. Optional `training.max_steps` stops after an exact update count; use `schedule.progress: steps` for equal-token studies. The time cap remains a safety stop and the saved summary identifies which limit ended training. Sampling with replacement does not guarantee an epoch.
+
+Preparation, training, evaluation, and generation now have separate seeds. New configs set them explicitly; legacy YAMLs retain their derived defaults. Validation also has its own microbatch size, so changing model training memory settings need not change the validation targets.
 
 Training writes these files in `experiment.output_dir`:
 
@@ -61,8 +63,9 @@ Training writes these files in `experiment.output_dir`:
 | `run_config.json` | Resolved YAML settings, actual device and precision, tokenizer vocabulary size, parameter count, and prepared token counts. |
 | `metrics.csv` | Step, elapsed seconds, training loss, validation loss and perplexity when measured, learning rate, cumulative training tokens, and average tokens per second. |
 | `checkpoint.pt` | Model and optimizer states, model configuration, seed, elapsed training time, processed tokens, and resolved run settings. |
+| `training_summary.json` | Completed steps/targets, stop reason, final validation score, and separate training/evaluation/checkpoint-saving durations. |
 
-`evaluate` loads the checkpoint and scores fixed, seeded windows from the separate test split. Validation and test cross-entropy and perplexity are comparable **when the tokenizer is the same**. `generate` loads the checkpoint and uses `generation.prompt`, `max_new_tokens`, `temperature`, and `top_k` from the YAML; `--prompt` overrides only the text for that invocation. Both commands accept `--checkpoint` to use a specific saved checkpoint.
+`evaluate` scores fixed sampled test windows. `score_checkpoints.py` scores multiple checkpoints on common validation targets, saving per-story losses and paired uncertainty diagnostics; its test mode is explicit. Close CE comparisons require the same tokenizer, targets, and context policy. `generate` uses the YAML prompt, length cap, temperature, top-k, and independent generation seed, stopping at EOT. Both `evaluate` and `generate` accept `--checkpoint`. `sample_stories.py` creates repeatable blind rating material, and `context_checks.py` supplies narrow paired color-tracking probes.
 
 ## Checks
 
@@ -70,7 +73,7 @@ Training writes these files in `experiment.output_dir`:
 python -m unittest discover -s tests -v
 ```
 
-The tests cover next-token targets, causal masking, tied weights, and overfitting a tiny repeated batch. A short smoke run checks the full file workflow, but its generated text is not a meaningful quality benchmark.
+The tests cover shifted targets, causal masking, tied weights, tiny-batch overfitting, independent seeds, config validation, weighted full-stream evaluation, EOT stopping, and step/time stopping with checkpoint loading. CPU checks passed during follow-up setup; the new GPU experiments have not been run. Smoke-generated text is not a quality benchmark.
 
 ## Reproducing the report (DSA4212 submission)
 
