@@ -4,14 +4,19 @@ The main question remains: **which tested model predicts TinyStories best after
 one hour on the same GPU allocation, using our shared training recipe?**
 The original 20-run grid is exploratory evidence. Prioritize common validation
 and independent repeat trials before adding another research question.
-**All follow-up research results are pending.** Local correctness checks do not
-count as completed training experiments.
+**Stages 1 and 2 have returned results.** The reported full-validation scores favour
+XL in all three one-hour seed pairs: mean CE 1.494657 versus 1.524387 for XXL.
+See [the analysis and plots](analysis/followups/review/ANALYSIS.md). The local
+handoff lacks evaluation protocol/story files and training summaries; recover
+those existing artifacts before treating the comparison as fully reproducible.
+Stage 3 and capability checks remain pending. Commands for completed stages are
+kept as a record; their existing output folders will prevent accidental reruns.
 
 | Stage | Priority | Additional training | What it answers |
 | --- | --- | ---: | --- |
-| 1. Common validation audit of saved models | First | None | Does the recorded ranking hold on identical validation targets? |
-| 2. Three fresh one-hour seeds each for XL/XXL | Main experiment | 6 GPU-hours | Is the one-hour ranking repeatable under the shared recipe? |
-| 3. Short equal-token XL/XXL pair | Optional, after interpreting stage 2 | About 1.5 GPU-hours | Does the ranking change at equal exposure under a matched step schedule? |
+| 1. Common validation audit of saved models | Completed as supplied; recover protocol/story exports | None | Does the recorded ranking hold on identical validation targets? |
+| 2. Three fresh one-hour seeds each for XL/XXL | Completed as supplied; 6 GPU-hours used | No rerun needed | Is the one-hour ranking repeatable under the shared recipe? |
+| 3. Short equal-token XL/XXL pair | Next optional explanatory experiment | About 1.6 GPU-hours at the new measured rates | Does the ranking change at equal exposure under a matched step schedule? |
 | Blind story ratings | Small supplement | None | Can readers notice differences in sampled stories? |
 | Four-hour runs, new data-fraction study, learning-rate tuning | Deferred | Separate budgets | Different questions; choose only after the core results. |
 
@@ -130,7 +135,14 @@ If one model consistently leads, describe it as best **under this shared recipe*
 No per-size optimizer search was performed. Small numerical gaps need practical
 context: a CE difference `d` corresponds to a perplexity ratio `exp(d)`; statistical
 separation alone does not establish an important story-quality improvement.
-Return these results before deciding whether stage 3 is needed.
+These results are now available: every XL run scores better than every XXL run,
+with about 2.93% lower geometric-mean perplexity for XL on average. Training controls
+match, but variability includes execution speed: XXL seed 44 processes 9.8% more
+targets than seed 43. Three seeds give initial observed repeatability, not a
+universal or precise population-level ranking. Recover `protocol.json`,
+`paired_comparisons.json`, per-story `.npz` files from both scoring folders and
+the six `training_summary.json` files. Preserve the trained weights on the training
+machine for independent re-evaluation; they are not included locally.
 
 ## 3. Optional: short equal-token comparison
 
@@ -141,8 +153,8 @@ significance under random sampling. The old 474M-target proposal is superseded.
 
 | Config | Output directory | Expected training time on the original allocation |
 | --- | --- | ---: |
-| `configs/followups/xl_full_equal_tokens_seed42.yaml` | `runs/followups_equal_tokens_143m/xl_full_equal_tokens_seed42` | About 31 minutes |
-| `configs/followups/xxl_full_equal_tokens_seed42.yaml` | `runs/followups_equal_tokens_143m/xxl_full_equal_tokens_seed42` | About 60 minutes |
+| `configs/followups/xl_full_equal_tokens_seed42.yaml` | `runs/followups_equal_tokens_143m/xl_full_equal_tokens_seed42` | About 32 minutes |
+| `configs/followups/xxl_full_equal_tokens_seed42.yaml` | `runs/followups_equal_tokens_143m/xxl_full_equal_tokens_seed42` | About 62 minutes |
 
 ```bash
 python run.py train --config configs/followups/xl_full_equal_tokens_seed42.yaml
@@ -249,6 +261,9 @@ python context_checks.py \
 Scoring directories include `scores.csv`, `protocol.json`,
 `paired_comparisons.json`, per-story `.npz` files, and saved training configs.
 No need to send the already-downloaded multi-GB baseline checkpoints.
-**Recommended stopping point: stages 1 and 2.** Their results determine whether
-another 1.5 training hours would be useful. All planned work remains labelled
-pending in the report until actual results arrive.
+**Current decision:** stages 1 and 2 consistently favour XL under the shared
+one-hour recipe. Recover the missing evaluation artifacts, then use stage 3 if
+explaining the capacity/exposure trade-off is the next goal. It needs about
+32 + 62 minutes at the new mean throughputs; keep its preplanned seed and schedule.
+Four-hour training and broad new grids remain deferred. Equal-token and capability
+results remain pending; no new training or re-evaluation was run during this analysis.

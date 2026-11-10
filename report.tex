@@ -53,11 +53,13 @@ loss among the tested families under this shared recipe. XXL processes about hal
 as many tokens. This is a conditional fixed-time result; reduced exposure is a
 hypothesis for the ranking, not an established cause. Full-data exposure ranges
 from 0.303 to 2.077 cache-equivalents, with no guarantee of unique coverage.
-The original validation-selected \texttt{xl\_data50} has test loss 1.4846 and
-perplexity 4.41. Unequal validation samples and one training seed limit close
-comparisons. The focused follow-up prioritizes common validation and six fresh
-one-hour XL/XXL seed trials, optionally followed by a short equal-token pair.
-Four-hour runs are deferred; all follow-up research results remain pending.
+The original validation-selected \texttt{xl\_data50} has test perplexity 4.41.
+A supplied common-validation audit and six fresh full-data trials (three seeds per
+finalist) strengthen the fixed-time observation: mean CE is 1.494657 for XL and
+1.524387 for XXL, with XL lower in every trial. This is initial repeatability
+evidence for the shared recipe, not a significance or universal-size claim.
+Missing local evaluation-protocol files and checkpoints limit independent
+reproduction. Equal-token and capability checks remain pending; four-hour runs are deferred.
 \end{abstract}
 
 
@@ -68,7 +70,9 @@ weights, embeddings, or tokenizer fine-tuning) and trains for approximately one 
 pass, and checkpointing all happen outside that timed loop. All 20 runs use the same
 hardware: a single NVIDIA H100 NVL MIG 3g.47gb slice in \texttt{bfloat16}. The same
 hour of wall-clock does not buy the same number of tokens for every size, and that
-gap is central to interpreting our result (\S\ref{sec:results}).
+gap is central to interpreting our result (\S\ref{sec:results}). The completed
+repetition study adds six one-hour training runs under the same recorded GPU
+allocation and training precision; offline evaluation time is additional.
 
 \section{Research question}
 Which model size and training-data fraction give the best language-modeling
@@ -142,9 +146,10 @@ The exact commands are in the repository README; the pipeline is five steps.
 
 \paragraph{Validation protocol limitation.}
 Original validation used 16 microbatches: 65{,}536 targets for Small/Medium/Large,
-32{,}768 for XL, and 16{,}384 for XXL. Close gaps require common-target scoring.
-New follow-ups score $4\times64\times256=65{,}536$ targets with a fixed evaluation
-seed, independent of training randomness.
+32{,}768 for XL, and 16{,}384 for XXL. The supplied common-validation audit addresses
+this comparison; its offline protocol files are not yet available locally. All six
+repetition configs score $4\times64\times256=65{,}536$ in-loop targets with a fixed
+evaluation seed, independent of training randomness.
 
 \section{Results}\label{sec:results}
 Table~\ref{tab:results} lists all 20 runs sorted by final validation loss, the metric
@@ -262,7 +267,9 @@ full-data XXL has 1.5174. All 20 test scores have subsequently been inspected.
 They must be disclosed as exploratory comparisons; future adaptive decisions use
 validation and cannot treat this test set as fresh confirmation. The archived
 full-test protocol scores 957{,}184 targets and drops a short tail. The new full
-evaluator includes the tail and records that protocol change.
+evaluator is designed to include the tail and record that protocol change. The
+supplied follow-up CSVs report the intended target count, but the corresponding
+protocol JSON files have not been supplied locally.
 
 We have no training repeats supporting a claim that fraction differences are
 ``within noise'' or statistically indistinguishable. Equal tokenization makes CE
@@ -317,60 +324,137 @@ validation windows change. The observed difference cannot be attributed solely t
   \label{fig:budget}
 \end{figure}
 
+\subsection{Completed common-validation audit: supplied exports}
+The supplied \path{analysis/followups/archived_validation/scores.csv} reports
+3{,}808{,}643 validation targets for each archived checkpoint
+(Table~\ref{tab:commonval}). The full-data XXL--XL gap is 0.034285 nats, compared
+with 0.003782 in the original unequal sampled validation. The audit supports XL's
+advantage for these checkpoints; the original small sampled gap was not the right
+close-comparison estimate. XL/100\% also edges XL/50\% by 0.001798 nats, reversing
+the original sampled ordering. This tiny single-seed fraction difference does not
+establish that full data is reliably better than 50\%.
+
+\begin{table}[htbp]
+\centering
+\caption{Supplied common-validation audit of archived checkpoints.}
+\label{tab:commonval}
+\begin{tabular}{lrr}
+\toprule
+Archived model & Validation CE & Perplexity \\
+\midrule
+Large / 100\% & 1.546940 & 4.697073 \\
+XL / 50\% & 1.491074 & 4.441863 \\
+XL / 100\% & 1.489276 & 4.433885 \\
+XXL / 100\% & 1.523562 & 4.588538 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The scored count matches the intended complete validation stream except its first
+token. However, neither scoring directory locally contains \path{protocol.json},
+per-story NPZ files, or \path{paired_comparisons.json}. The exact offline context
+policy, precision, validation hash, and story-level intervals cannot be independently
+checked from the supplied exports.
+
+\subsection{Completed one-hour repetitions: three seeds per finalist}
+The six supplied full-data runs use the shared recipe with seeds 42, 43, and 44.
+Their exported scores in \path{analysis/followups/seed_validation/scores.csv}
+report 3{,}808{,}643 validation targets per checkpoint (Table~\ref{tab:seeds}).
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Supplied one-hour repetitions. Training targets are shown in millions;
+positive XXL--XL CE differences favour XL.}
+\label{tab:seeds}
+\begin{tabular}{rrrrrr}
+\toprule
+Seed & XL CE & XXL CE & XXL--XL & XL targets (M) & XXL targets (M) \\
+\midrule
+42 & 1.490381 & 1.529798 & +0.039417 & 271.016 & 138.121 \\
+43 & 1.495970 & 1.530280 & +0.034309 & 267.911 & 133.325 \\
+44 & 1.497618 & 1.513084 & +0.015466 & 267.891 & 146.387 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+XL's mean CE is 1.494657 (sample SD 0.003793), versus 1.524387 (SD 0.009792) for
+XXL. The mean paired difference is $+0.029731$ nats. Exponentiating mean CE gives
+geometric-mean perplexity 4.457805 versus 4.592329, approximately 2.93\% lower for
+XL. Every XL run scores below every XXL run in the supplied table. Three seeds
+provide initial repeatability evidence, not a 95\% significance claim or a universal
+ranking.
+
+Saved training configurations match the intended controls and record the same
+hardware label, training-cache hash, code hashes, and bfloat16 precision. All
+29{,}961 supplied log rows have consistent step-times-4096 target counters, and
+final losses are finite. Recorded loop durations span 3600.008--3600.101 seconds.
+Mean processed targets are 268.939M for XL and 139.278M for XXL, a ratio of about
+1.931. Equal time still implies unequal exposure.
+
+Between-run variation combines training randomness and throughput variability:
+XXL/seed44 processes about 9.8\% more targets than XXL/seed43, so its lower loss
+cannot be attributed to the numeric seed alone. Checkpoints and
+\path{training_summary.json} are not available locally. We cannot reload the
+weights, reproduce offline scores, or verify separate final-evaluation/save timing
+here. This is analysis of supplied results, not a new local run.
+
 \section{Discussion and limitations}
-The grid addresses a practical question about a fixed-time training recipe. Equal
-time intentionally allows different token exposure and does not invalidate that
-question. It does limit claims about intrinsic capacity, convergence, or performance
-at equal exposure. Whether XXL overtakes XL with more training remains open.
+The original grid addresses a practical fixed-time training question. Equal time
+intentionally permits different token exposure; it does not establish intrinsic
+capacity or equal-exposure performance. The supplied common-validation audit and
+three-seed repetitions strengthen XL's advantage under the shared one-hour recipe,
+but do not establish that exposure caused the gap. The next targeted explanatory
+comparison is the preplanned short equal-token pair with fresh models and a common
+step-based schedule.
 
-Only one training seed was used. The optimizer recipe was not tuned per size;
-validation samples differed by family; windows were sampled with replacement;
-the dataset revision was not pinned; and all 20 test scores have been inspected.
-These limitations cannot be resolved from learning curves alone.
+The original grid has one seed per configuration; the repetition study has only
+three per finalist. The recipe is not tuned per architecture, training samples
+with replacement, throughput varies between runs, the dataset revision was not
+pinned, and all 20 original test scores have been inspected. Missing offline
+protocol/checkpoint artifacts limit independent verification. Saved training hashes
+and aggregate scores do not replace reproducible evaluation artifacts or establish
+statistical significance.
 
-\subsection{Focused follow-ups; results pending}
-Exact commands are in \texttt{FOLLOWUP\_COMMANDS.md}. No new follow-up research
-results are available. The execution order is:
+\subsection{Follow-up status and next experiment}
+The common-validation audit and six one-hour trials are complete as supplied, with
+results above. Recover the missing protocol, per-story, checkpoint, and timing
+artifacts; the local exports do not support checking story-level intervals.
+Exact commands are in \texttt{FOLLOWUP\_COMMANDS.md}. Remaining work is:
 \begin{enumerate}
-\item First, score archived Large/full, XL/50\%, XL/full, and XXL/full checkpoints
-on identical validation targets. Save paired story-level losses and conditional
-bootstrap intervals.
-\item As the main training study, train XL and XXL on full data for one hour with
-seeds 42, 43, and 44 (six GPU-hours). Report every seed, mean loss, sample standard
-deviation, throughput, and processed targets. Interpret these results before
-launching further training.
 \item Optionally compare fresh XL/XXL models at 35{,}000 updates, or
 143{,}360{,}000 targets, under the same step-based learning-rate schedule. Original
 throughputs suggest about 31 minutes for XL and 60 minutes for XXL, around 1.5
 GPU-hours total. A two-hour safety cap per model marks early stops as incomplete.
 Equal targets do not guarantee an epoch; one cache-equivalent is not a necessary
 scientific milestone. The old time-scheduled XXL checkpoint is not an exact control
-for a new step-scheduled XL run.
+for a new step-scheduled XL run. This pair has not been trained.
 \item Use frozen-prompt blind story ratings as a modest supplement. The corrected
-80-prompt color diagnostic is exploratory and is not a central source of certainty.
+80-prompt color diagnostic is exploratory. These ratings and probe scores remain pending.
 \end{enumerate}
-The four-hour XL/XXL pair is deferred: it costs about eight GPU-hours for one seed
-per model and answers a separate larger-budget question. Its schedule stretches to
-the budget; these runs are not checkpoint continuations. A later symmetric
-learning-rate sensitivity check or one-model experiment with much smaller data
-subsets would likewise address separate questions.
+The four-hour XL/XXL pair remains deferred: it costs about eight GPU-hours for one
+seed per model and answers a separate larger-budget question. Its schedule stretches
+to the budget; these runs are not checkpoint continuations. A symmetric
+learning-rate sensitivity check or one-model experiment with smaller data subsets
+would likewise address separate questions.
 
-New configs fix preparation seed 42, evaluation seed 43, and 65{,}536 in-loop
-validation targets independently of training randomness. Training records code and
-cache hashes, package versions, actual hardware, targets, and stop reason.
-Story-resampling intervals condition on fixed checkpoints and do not replace
-training repeats. Three seeds provide an initial repeatability check, not a precise
-uncertainty guarantee; an inconclusive ranking is an acceptable outcome. The study
-compares a shared recipe and does not optimize each architecture's hyperparameters.
+Completed training configs fix preparation seed 42, evaluation seed 43, and
+65{,}536 in-loop targets independently of training randomness. The observed
+three-seed ranking consistently favours XL, but this is still an initial
+repeatability check under a shared recipe; per-architecture hyperparameters were
+not optimized. Story-resampling intervals, once supplied, would condition on fixed
+checkpoints and would not replace training repeats.
 
 \section{Conclusion}
-XL is the best observed family among the tested one-hour configurations under the
-shared recipe. The original validation-selected model reaches test perplexity 4.41.
-This supports a bounded fixed-time observation, rather than a universal claim that
-larger models are better or a precise compute-optimal size. Data-fraction effects
-are small in the recorded single-seed runs. Their stability, the cause of the
-XL--XXL difference, and longer-budget or equal-token behavior remain to be tested.
-Pending experiments are not evidence for the current conclusion.
+Under the recorded one-hour H100 MIG budget and shared recipe, XL consistently
+outperforms XXL in the supplied three-seed full-data comparison: mean CE 1.494657
+versus 1.524387, or about 2.93\% lower geometric-mean perplexity. The common-validation
+archive audit supports the same direction. This strengthens the original
+fixed-time observation without proving a universal best size, significance,
+convergence, or the cause of the gap. Offline protocol/checkpoint artifacts remain
+necessary for independent reproduction. Data-fraction findings still rely on the
+original single-seed grid. Equal-token training and capability ratings remain
+pending, and their outcomes are not evidence for the current conclusion.
 
 \bibliographystyle{plainnat}
 \bibliography{references}

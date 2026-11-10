@@ -2,7 +2,12 @@
 
 Use [FOLLOWUP_COMMANDS.md](FOLLOWUP_COMMANDS.md) for the exact commands, configuration
 paths, budgets, and files to return. This document explains the focused design.
-**No new research training or full validation comparison has been completed.**
+**The common-validation audit and six one-hour repetitions have now returned
+results.** XL leads in all three seed pairs, with mean CE 1.494657 versus 1.524387.
+See [the completed analysis](analysis/followups/review/ANALYSIS.md). Training logs
+and controls are internally consistent; missing scoring protocol/story artifacts
+and new checkpoints limit independent re-evaluation. The short equal-token pair
+and capability checks remain pending, and four-hour runs remain deferred.
 
 ## The question we are confirming
 
@@ -13,10 +18,12 @@ This is a practical question about performance per available training hour. Diff
 models processing different token counts is part of the trade-off. It does not
 invalidate the question, and finishing an epoch is not a prerequisite.
 
-The original grid explored five model sizes and four data fractions. We now need
-controlled confirmation, rather than another broad grid. The immediate priority is
-common validation followed by three fresh one-hour trials per finalist. The optional
-short equal-token pair asks a different explanatory question. Four-hour runs are deferred.
+The original grid explored five model sizes and four data fractions. The follow-up
+has now supplied common validation and three fresh one-hour trials per finalist.
+These consistently favour XL under the shared recipe, without proving intrinsic
+size superiority. Recover the missing evaluation artifacts; the short equal-token
+pair is the next targeted explanatory experiment. The sections below retain the
+design rationale. Four-hour runs are deferred.
 
 ## What the existing results establish
 
@@ -163,7 +170,10 @@ scores were inspected, so further model selection uses validation. Reused test
 scores can be descriptive, but are not fresh confirmation.
 
 The approved order is **common validation -> six one-hour trials -> interpret ->
-optional short equal-token pair**. Main training cost is six GPU-hours; adding the
-short pair gives about 7.5, plus inference and setup. No four-hour run, broad new
-grid, or capability score is required to complete that focused study. Update the
-report from actual results; every follow-up remains pending until it is run.
+optional short equal-token pair**. The first two stages are completed as supplied;
+the new mean rates suggest about 32 minutes for XL and 62 for XXL in the optional
+pair (roughly 1.6 GPU-hours). Keep the preplanned seed 42 and common step schedule;
+do not choose the best observed seed after seeing the results. No four-hour run,
+broad grid, or capability score is required to report the fixed-time observation.
+Three-seed variability also includes throughput differences. The report now
+distinguishes completed supplied results from pending exposure/capability checks.

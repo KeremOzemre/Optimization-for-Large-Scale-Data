@@ -14,7 +14,7 @@ python -m pip install -r requirements.txt
 
 ## Configure an experiment
 
-For the focused follow-up YAMLs and exact commands, use [FOLLOWUP_COMMANDS.md](FOLLOWUP_COMMANDS.md). Start with common validation scoring and six fresh one-hour XL/XXL seed trials (six GPU-hours), then stop and interpret. An optional 143,360,000-target pair adds about 1.5 GPU-hours; four-hour runs are deferred. The tools are locally checked and all follow-up research results remain pending. [NEXT_STEPS_GUIDE.md](NEXT_STEPS_GUIDE.md) explains the design and its limits.
+The common-validation audit and six one-hour follow-up runs have returned results: XL has lower reported full-validation loss in all three seed pairs (mean CE 1.494657 versus 1.524387), with about 2.93% lower geometric-mean perplexity. See [the analysis and plots](analysis/followups/review/ANALYSIS.md) for the control audit and missing evaluation artifacts. [FOLLOWUP_COMMANDS.md](FOLLOWUP_COMMANDS.md) records the completed commands and next optional 143,360,000-target pair (about 1.6 GPU-hours at the new measured rates). Four-hour runs remain deferred; [NEXT_STEPS_GUIDE.md](NEXT_STEPS_GUIDE.md) explains the design.
 
 See [CONFIGURATION.md](CONFIGURATION.md) for a table explaining every setting, its allowed values, and its effect.
 
@@ -75,7 +75,33 @@ python -m unittest discover -s tests -v
 
 The tests cover shifted targets, causal masking, tied weights, tiny-batch overfitting, independent seeds, config validation, weighted evaluation, EOT stopping, step/time stopping with checkpoint loading, equal-token budget completion checks, and balanced probe design. All 19 CPU tests passed during the focused-plan update; new GPU experiments have not been run. Smoke-generated text is not a quality benchmark.
 
-## Reproducing the report (DSA4212 submission)
+## Scientific paper version
+
+[report2.pdf](report/report2.pdf) is a separate paper-style account of the study,
+with its source in [report2.tex](report/report2.tex). The eight-page, two-column
+paper covers all 30 completed research runs: the original 20-run grid, the
+30-minute and longer-context extensions, and the six repeated trials. It also
+includes the historical test results and generated examples, token-exposure
+and approximate-compute analyses, common-validation audit, concise training
+methods, and a nine-run pilot/development inventory. Its bibliography, tables,
+and four figures are stored beside the original report's assets. Differences
+in hardware and scoring remain explicit; planned studies are marked pending.
+The original report remains available separately.
+
+To build the second report with a LaTeX installation, run from the project root:
+
+```bash
+(
+set -e
+cd report
+pdflatex -interaction=nonstopmode -halt-on-error report2.tex
+bibtex report2
+pdflatex -interaction=nonstopmode -halt-on-error report2.tex
+pdflatex -interaction=nonstopmode -halt-on-error report2.tex
+)
+```
+
+## Reproducing the original report (DSA4212 submission)
 
 Repository layout required by the course guidelines:
 

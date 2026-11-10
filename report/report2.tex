@@ -1,0 +1,449 @@
+% Standalone scientific account of the TinyStories experiments.
+% Compile from report/: pdflatex report2; bibtex report2; pdflatex report2 twice.
+\documentclass[10pt,twocolumn,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[margin=0.75in,columnsep=0.25in]{geometry}
+\IfFileExists{libertine.sty}{\usepackage{libertine}}{}
+\usepackage{amsmath,amssymb,booktabs,tabularx,array,graphicx}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{placeins}
+\usepackage{abstract}
+\usepackage{float}
+\usepackage[font=small,labelfont=bf]{caption}
+\IfFileExists{microtype.sty}{\usepackage{microtype}}{}
+\usepackage{xurl}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue,
+  pdftitle={Training Small GPT Models on TinyStories: Model Size, Data, Context, and Fixed-Time Evaluation},
+  pdfauthor={Steffany Lara, Kerem Ozemre, Tonio Kowalke, Ahmed Haj Hassine}}
+\urlstyle{same}
+\setlength{\emergencystretch}{2em}
+\setlength{\textfloatsep}{14pt plus 2pt minus 2pt}
+\setlength{\floatsep}{12pt plus 2pt minus 2pt}
+\setlength{\dblfloatsep}{12pt plus 2pt minus 2pt}
+\renewcommand{\dbltopfraction}{0.9}
+\renewcommand{\textfraction}{0.08}
+\raggedbottom
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\CE}{\operatorname{CE}}
+\newcommand{\PPL}{\operatorname{PPL}}
+
+\title{\textbf{Training Small GPT Models on TinyStories:\\
+Model Size, Data, Context, and Fixed-Time Evaluation}}
+\author{Steffany Lara \quad Kerem Ozemre \quad Tonio Kowalke \quad Ahmed Haj Hassine\\[4pt]
+\small National University of Singapore\\
+\small DSA4212: Optimisation for Large-Scale Data-Driven Inference}
+\date{10 November 2026}
+
+\begin{document}
+\twocolumn[\maketitle
+\begin{onecolabstract}
+Under a short training-time budget, increasing model capacity reduces the amount
+of text a model can process. We investigate this trade-off by training GPT models
+from scratch on TinyStories. An initial 20-run screen crosses five model families
+(16--253 million parameters) with four training-data fractions under a one-hour
+budget. We report the screen, token exposure, historical test scores, generated
+examples, and four budget/context extensions. The screen favours the 124M family,
+but unequal validation samples and a single seed motivate a common-validation
+audit and six fresh XL/XXL trials. Across three seed pairs, XL achieves lower
+reported validation cross-entropy: mean 1.4947 versus 1.5244, with approximately
+2.9\% lower geometric-mean perplexity and 1.93 times the training exposure.
+This supports an observed advantage under the tested recipe and recorded H100
+MIG allocation. Limited replication, changed conditions in supplementary runs,
+and incomplete offline-evaluation artifacts constrain broader conclusions.
+A controlled equal-target comparison remains pending.
+\end{onecolabstract}\vspace{0.7em}]
+
+\section{Introduction}
+
+A larger language model can represent more complicated patterns, but each update
+costs more computation. Under a fixed training clock, extra capacity therefore
+comes with fewer updates and less text exposure. Our practical question is:
+\emph{which tested GPT family predicts held-out TinyStories text best after one
+hour under a shared training recipe and recorded GPU allocation?}
+
+TinyStories is a synthetic collection of simple English stories intended to make
+coherent generation accessible to small models \citep{tinystories2023}. We use
+this restricted domain for a manageable from-scratch study. Research on compute
+allocation motivates examining model size and processed tokens together
+\citep{hoffmann2022}; our controlled resource is wall-clock time, rather than
+measured floating-point operations.
+
+We first screen five model sizes and four data fractions. Loss improves strongly
+through XL, while XXL offers no recorded one-hour improvement and data-fraction
+effects are small. Token audits, shorter-budget and longer-context trials, test
+scores, and generated stories help interpret that pattern. A close XL/XXL gap,
+unequal validation workloads, and only one seed then motivate common scoring and
+fresh repetitions. This paper includes all 30 completed research runs and the
+four-checkpoint audit; an appendix retains the nine pilot/development records.
+Copies of the original logs in two directories count once.
+
+\section{Methods}
+
+\subsection{Data and token sampling}
+
+We load \texttt{roneneldan/TinyStories} with Hugging Face \texttt{datasets}.
+The official training split contains 2,119,719 stories. We divide the official
+validation records 80/20 with preparation seed 42, obtaining 17,592 validation
+and 4,398 test stories. These are disjoint records; duplicate or paraphrased
+content has not been audited.
+
+The fixed GPT-2 tokenizer from \texttt{tiktoken} has 50,257 entries. We append
+end-of-text after each story and cache concatenated token IDs as \texttt{uint16}
+streams. Full training, validation, and test caches contain 473,992,236,
+3,808,644, and 957,274 tokens. The 25/50/75\% story subsets contain approximately
+118.45/236.97/355.37 million training tokens. Fractions describe available
+stories, not an imposed number of processed tokens.
+
+Training samples uniform token-window starts with replacement. Inputs and
+next-token targets are shifted by one position. Causal attention restricts each
+prediction to its current and preceding inputs. Windows can cross story
+boundaries; end-of-text does not reset attention. Consequently, processed
+\emph{targets} count repeated predictions. Dividing them by cache length gives
+cache-equivalent exposure, without proving a complete epoch or unique coverage.
+
+\subsection{Model and training recipe}
+
+We reuse nanoGPT's decoder-only Transformer \citep{vaswani2017,nanogpt} at commit
+\path{3adf61e154c3}, retaining its MIT attribution, random initialization, causal
+attention, learned position embeddings, and tied input/output weights. No
+pretrained weights are loaded. Table~\ref{tab:architectures} lists the families.
+Depth, width, and heads change together, so their individual effects are not
+isolated. Width is divisible by the head count. Core runs use context 256 and
+dropout 0.1.
+
+\begin{table*}[t]
+\centering\small
+\caption{Architecture families. Parameter counts include learned position
+embeddings and count the tied token/output matrix once. All use context 256,
+dropout 0.1, and an effective batch of 16 sequences.}
+\label{tab:architectures}
+\begin{tabular}{lrrrrr}
+\toprule
+Family & Layers $L$ & Width $d$ & Heads $H$ & Parameters & Microbatch $\times$ accumulation\\
+\midrule
+Small  & 4  & 256  & 4  & 16,079,360  & $16\times1$\\
+Medium & 6  & 384  & 6  & 30,018,816  & $16\times1$\\
+Large  & 8  & 512  & 8  & 51,037,184  & $16\times1$\\
+XL     & 12 & 768  & 12 & 123,747,840 & $8\times2$\\
+XXL    & 16 & 1024 & 16 & 253,085,696 & $4\times4$\\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+Training minimizes average next-token cross-entropy using PyTorch automatic
+differentiation and AdamW \citep{adamw2019}. Shared settings are peak learning
+rate $3\times10^{-4}$, weight decay 0.1, betas (0.9, 0.95), and gradient-norm
+clipping at 1.0 after accumulation. Different microbatches preserve 16 sequences,
+or 4,096 targets, per optimizer update. CUDA bfloat16 autocasting is used with
+float32 stored parameters, on one device without compilation or distributed
+training. The shared recipe is not tuned separately for each family.
+
+The learning rate rises from $3\times10^{-5}$ to its peak during the first 2\%
+of the time budget, then follows cosine decay back to the starting rate.
+Warmup lasts 72 seconds in one-hour runs and 36 seconds in half-hour runs.
+The timer excludes preparation and model/optimizer initialization, includes
+periodic validation and logging, and stops after the current update. Final
+validation and saving occur afterward. We retain the final checkpoint, without
+early stopping or selecting an intermediate iterate.
+
+The screen and repetitions record \emph{NVIDIA H100 NVL MIG 3g.47gb}, totalling
+26 nominal slice-hours. The four extensions add 2.5 nominal hours labelled
+\emph{NVIDIA H100 NVL}; identical allocation is unverified. Offline evaluation
+and development costs are additional. Matching hardware labels do not guarantee
+identical live load.
+
+\subsection{Assessment and analysis}
+
+Evaluation disables dropout and gradients. We report token-weighted
+cross-entropy (CE, nats per target) and perplexity (PPL), its exponential.
+Original validation uses 16 fixed microbatches: 65,536 targets for
+Small/Medium/Large, 32,768 for XL, and 16,384 for XXL. Fresh repetitions instead
+use 65,536 targets for both families, evaluation seed 43, and approximately
+five-minute intervals. Preparation seed 42 is independent of training seed.
+
+The common offline scorer traverses non-overlapping 256-token windows, resets
+context each window, includes the tail, and defaults to float32. Returned rows
+report 3,808,643 validation targets, matching the intended count. Missing runtime
+protocol exports prevent independent verification of every scoring option.
+Across training seeds we report individual values, mean CE, sample standard
+deviation, and geometric-mean PPL.
+
+Historical full-test scoring uses float32 and non-overlapping 256-token windows
+but drops the short tail, scoring 957,184 targets. Bits per byte (BPB) divides
+negative log-likelihood in bits by decoded target-token byte lengths, including
+end-of-text representations. Its external comparability therefore depends on
+special-token and context policy. The four extension test exports are sampled,
+with unequal counts and incomplete protocol metadata; they are separate from
+the full-test endpoint.
+
+Each original model also has five fixed-prompt continuations: temperature 0.8,
+top-$k$ 40, maximum 150 new tokens, and seed 42 reset for each prompt. The legacy
+export truncates displayed text at the first new end-of-text token. These 100
+outputs were not blindly rated. We additionally audit target counters, calculate
+measured throughput and cache-equivalent exposure, and use $6ND$ as an approximate
+training-compute proxy, where $N$ is parameters and $D$ is processed targets.
+This proxy does not measure GPU utilization.
+
+\section{Experimental sequence}
+
+The original $5\times4$ screen combines the five families with 25/50/75/100\%
+of training stories. All runs use seed 42 and a one-hour budget. This explores
+capacity and available-data effects with one observation per cell.
+
+To explore budget sensitivity, Large, XL, and XXL are trained afresh on full
+data for 1,800 seconds, keeping their original batches and seed 42; validation
+is every 150 seconds. We compare them with the original full-data one-hour
+runs. A separate XL run extends context to 512 for one hour. Microbatch 4 and
+accumulation 4 preserve 16 sequences but double targets/update to 8,192.
+Position embeddings add 196,608 parameters (total 123,944,448). Validation still
+scores 32,768 targets, with different windows/context. Hardware labels differ
+from the screen, and each extension has only one seed.
+
+The later audit re-scores Large/full, the original validation-selected XL/50\%,
+and XL/full and XXL/full on common validation. This checks measurement rather
+than retraining variability. We then train fresh XL and XXL models with seeds
+42/43/44, keeping the full cache, preparation seed, evaluation seed, optimizer,
+schedule, and corrected validation workload fixed. Fresh seed-42 runs avoid
+mixing old assessment overheads and cache provenance with the new trials.
+Finalists were selected after inspecting the screen; the follow-up is targeted
+replication of an exploratory finding.
+
+\section{Results}
+
+\subsection{Initial size and data-fraction screen}
+
+Figure~\ref{fig:original2} shows the original experiments; Table~\ref{tab:allscreen}
+retains all 20 validation and test endpoints. Full-data sampled CE falls from
+1.8386 (Small) to 1.6444 (Medium), 1.5460 (Large), and 1.5068 (XL), then rises
+to 1.5106 (XXL). XL/50\% has the smallest sampled score, 1.5025. These broad
+patterns favour XL, while unequal validation samples complicate the close
+finalist comparison.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/report2_original_overview.png}
+\caption{Original 20-run screen: validation against time, final loss against
+size, data-fraction effects, and loss against training exposure. Colours identify
+families and line styles identify story fractions. The flattening near XL/XXL
+motivates focused re-testing. Validation workloads differ, and equal targets do
+not align the time-based learning-rate schedule.}
+\label{fig:original2}
+\end{figure*}
+
+Within every family, 100\% data improves on 25\% by approximately 0.005--0.013
+nats, but intermediate fractions are not consistently ordered. This is a small
+observed fraction effect, rather than evidence that data quantity is irrelevant.
+The repeated full-data trials do not test the reliability of these fraction
+differences.
+
+\subsection{Exposure and descriptive compute}
+
+All 262,432 original logged rows satisfy the completed-step target formula.
+Fifteen runs process at least one cache-equivalent; only XL/75--100\% and
+XXL/50--100\% remain below one. Small/25\% reaches 8.206 equivalents, ruling
+out insufficient time to revisit data as an explanation for the entire grid.
+Replacement sampling still leaves unique coverage unknown.
+
+\input{report2_exposure.tex}
+
+Full-data exposure declines from 2.077 equivalents for Small to 0.303 for XXL
+(Table~\ref{tab:exposure2}). At observed rates, one equivalent would require
+about 29 minutes for Small and 3 hours 18 minutes for XXL. These are projections,
+not completed longer runs or guaranteed epochs. Equal exposure is a different
+experimental control from equal time.
+
+The full-data $6ND$ proxy increases from approximately $9.50\times10^{16}$
+to $2.18\times10^{17}$ despite equal clocks. A descriptive quadratic fitted in
+log-parameter count to the five rounded full-data endpoints has a vertex near
+130M parameters (Figure~\ref{fig:compute2}). Five single-seed observations with
+unequal validation samples cannot establish a scaling law or optimal size.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/report2_compute.png}
+\caption{Original endpoints against the approximate $6ND$ compute proxy (left)
+and a quadratic fit to the five full-data endpoints (right). The approximately
+130M vertex describes this screen; actual device compute and utilization were
+not measured.}
+\label{fig:compute2}
+\end{figure*}
+
+\subsection{Budget and context extensions}
+
+Among the three 30-minute trials, Large has the lowest sampled CE (1.5803),
+ahead of XL (1.6332) and XXL (1.6797); the one-hour full-data screen favours XL
+(Table~\ref{tab:extensions2}). This suggests budget sensitivity, but changed
+hardware labels and unequal validation workloads prevent attributing the
+ranking change solely to time.
+
+\input{report2_extensions.tex}
+
+The context-512 XL recipe records validation CE 1.4555, versus 1.5068 for the
+original context-256 XL, and sampled-test CE/PPL 1.4606/4.31. It processes
+190.11M targets versus 279.83M. This promising variant also changes target
+batch, position embeddings, assessment windows, and recorded allocation.
+It therefore does not isolate the effect of context length. Its sampled-test
+PPL cannot be ranked directly against the original full-test results.
+
+\subsection{Historical tests and generated stories}
+
+All 20 original test CE/PPL/BPB exports appear in Table~\ref{tab:allscreen}.
+Full-data test CE/PPL are Small 1.833995/6.2588, Medium 1.641483/5.1628,
+Large 1.539026/4.6601, XL 1.482373/4.4034, and XXL 1.517420/4.5604.
+The original validation-selected XL/50\% has 1.484568/4.4131. These historical
+results agree with the broad family pattern, but all were inspected; they are
+not untouched confirmation for later choices. No fresh test export is supplied
+for the six repeated trials.
+
+The saved continuations also reveal repetition and inconsistent characters.
+For ``Tom had a big red ball.'', Small/full switches to an unintroduced Tim;
+XL/full later has a girl tell Tom ``I want to pet you''; XXL/full has Sam say
+``I'm Sam. I'm Tom.'' These illustrate errors that average loss does not
+summarize. Five generic prompts and one unblinded sampling seed cannot estimate
+error rates or establish a qualitative family ranking.
+
+\subsection{Why XL and XXL were re-tested}
+
+XL is the strongest family in the initial screen. XXL has approximately 2.05
+times its parameters but only 51.3\% of its full-data exposure. Their sampled
+CE gap is just 0.003782, compared with 0.039197 between Large and XL.
+Figure~\ref{fig:original2} therefore identifies a close, practically relevant
+comparison whose capacity/exposure trade-off remains unresolved. Unequal
+validation samples motivate aligned scoring first; a single seed separately
+motivates fresh training.
+
+\input{report2_audit.tex}
+
+Common scoring retains XL's lead (Table~\ref{tab:audit2}). The full-data
+XXL-minus-XL gap becomes 0.034285. XL/full also beats XL/50\% by 0.001798,
+reversing the original sampled ordering. This small change does not establish
+a fraction optimum. Coverage, window boundaries, and intended precision change
+together, so the larger finalist gap cannot be attributed solely to sample size.
+
+\subsection{Three-seed repetitions and throughput}
+
+XL's mean reported full-validation CE is 1.494657 (sample SD 0.003793), versus
+1.524387 (SD 0.009792) for XXL. Paired XXL-minus-XL gaps are 0.039417,
+0.034309, and 0.015466: all three pairs favour XL, as does every observed
+cross-family comparison (Figure~\ref{fig:repetitions}). These comparisons reuse
+six training runs; they are not additional independent replications.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/report2_seed_comparison.png}
+\caption{Returned common-validation scores and processed training targets for
+six fresh one-hour trials. Lines join matching seed labels, not aligned
+initialization states. All three pairs favour XL. Complete individual results
+are retained in Table~\ref{tab:allrepetitions}.}
+\label{fig:repetitions}
+\end{figure*}
+
+Geometric-mean PPL is 4.457805 for XL and 4.592329 for XXL, approximately 2.93\%
+lower for XL. The mean paired CE gap is 0.029731. An illustrative paired $t$
+95\% interval is $[-0.001606,\,0.061068]$; it includes zero and relies on a
+normality assumption that three pairs cannot reliably assess. We report an
+observed repeatable direction, without a significance claim.
+
+All 29,961 supplied repetition rows have finite recorded losses and consistent
+counters; loop times span 3,600.008--3,600.101 seconds. Recorded controls,
+code/cache hashes, software, hardware label, and precision match. XL processes
+268.939M targets on average versus 139.278M for XXL, a 1.931-fold ratio
+(74,704 versus 38,688 targets/second). XXL seed 44 processes 9.8\% more targets
+than seed 43 and has the best XXL loss. Observed variability therefore combines
+training randomness with execution/exposure variation.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/report2_learning_curves.png}
+\caption{Fresh sampled-validation curves against time and processed targets.
+XL leads after one hour; XXL appears better at comparable exposure. Time-based
+schedules differ at equal targets, so this is descriptive evidence. Sampled
+curve values are distinct from the full-validation scores in Figure~\ref{fig:repetitions}.}
+\label{fig:curves2}
+\end{figure*}
+
+At 120M targets, interpolation of sampled curves gives CE about 1.676--1.678
+for XL and 1.545--1.551 for XXL (Figure~\ref{fig:curves2}). XXL reaches that
+exposure later in its time-based schedule. These curves suggest a capacity/
+exposure trade-off but do not isolate its cause. All six improve in the final
+five minutes, without establishing convergence or eventual XXL overtaking.
+
+\section{Discussion and limitations}\label{sec:limitations}
+
+The screen, common-scoring audit, and fresh trials consistently identify XL as
+a useful one-hour configuration under the shared recipe. Equal time deliberately
+allows unequal exposure: this answers a practical resource-allocation question,
+while leaving intrinsic capacity effects unresolved. Depth, width, and heads
+also change together, and no per-family optimizer search was performed.
+The 2.9\% PPL improvement has no measured translation into perceived story quality.
+
+Data-fraction effects are smaller and remain single-seed observations.
+Sufficient data, corpus redundancy, and optimization limits are plausible
+explanations that the study does not distinguish. The budget/context extensions
+raise useful questions but change multiple conditions. Controlled follow-ups
+would match allocation, target batch, and assessment before isolating context
+or time effects.
+
+The targeted repetitions have only three seeds per family and were chosen after
+exploratory inspection. Their SD includes throughput variation. TinyStories is
+a restricted synthetic domain, and neither loss nor anecdotal stories establish
+broad language ability. Blind ratings and balanced context diagnostics have
+no completed results.
+
+Reproducibility is incomplete. The dataset revision is unpinned, historical
+cache ordering is not fully verified, and duplication was not audited. New
+hashes establish cache agreement among repetitions, not identity with every
+old cache. The handoff lacks the six new checkpoints and timing summaries,
+offline protocol JSONs, and per-story/bootstrap files. Returned counts match
+the intended validation endpoint, but precision, stream identity, context policy,
+and conditional intervals cannot be independently verified from aggregate rows.
+The four archived checkpoint identifiers match the downloaded-baseline manifest.
+All historical tests were already inspected.
+
+The next focused explanatory experiment is the prepared equal-target pair:
+35,000 updates, 143,360,000 targets, and matched step-based warmup/cosine schedules
+for fresh XL and XXL models. This addresses the schedule mismatch at equal
+exposure while allowing runtime to differ. It remains pending, as do four-hour
+extensions and capability checks; none contributes a result here.
+
+\section{Conclusion}
+
+Across 30 research training runs, the initial screen shows strong improvements
+through XL and small effects across the tested data fractions. Exposure audits
+explain how the fixed clock gives different amounts of training text; budget
+and context extensions identify promising but confounded variants. Common
+validation and three fresh trials per finalist preserve an observed XL advantage:
+CE 1.4947 versus 1.5244, with about 2.9\% lower PPL and 1.93 times the training
+exposure. This supports the tested one-hour recipe, with limited replication and
+provenance. It establishes neither a universal optimal size nor exposure as the
+cause of the ranking. Equal-target training remains the next explanatory check.
+
+\bibliographystyle{plainnat}
+\begingroup\raggedright
+\bibliography{report2_references}
+\endgroup
+
+\newpage
+\appendix
+\section{Complete results}
+
+\input{report2_repetitions.tex}
+\input{report2_experiments.tex}
+\input{report2_development.tex}
+
+Research source records are \path{results/<run>/}, the four extension directories
+under \path{runs/}, and \path{runs/followups_1h/}. Score exports and the archived
+checkpoint manifest are under \path{analysis/followups/}; raw configuration and
+CSV files preserve full settings. Repetition logs record project commit
+\path{0052a4b3add7} (full identifier in configurations) and matching code/cache hashes.
+Pipeline checks cover shifted targets, causal masking, tied weights, tiny-batch
+overfitting, checkpoint loading, generation, and counters. Pilot/development
+scores in Table~\ref{tab:development2} document execution, not controlled
+scientific comparisons.
+
+Code and archived weights are available in the
+\href{https://github.com/KeremOzemre/Optimization-for-Large-Scale-Data}{project repository}
+and \href{https://huggingface.co/dsa4212-tinystories/tinystories-nanogpt}{checkpoint repository}.
+No training or checkpoint re-evaluation was launched for this report revision.
+\end{document}

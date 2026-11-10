@@ -1,0 +1,57 @@
+{
+  "sources": [
+    "analysis/followups/seed_validation/scores.csv",
+    "analysis/followups/archived_validation/scores.csv",
+    "runs/followups_1h"
+  ],
+  "logged_rows_checked": 29961,
+  "training_controls_match": true,
+  "token_counts_and_losses_valid": true,
+  "archived_hashes_match_manifest": true,
+  "statistics": {
+    "xl": {
+      "mean_ce": 1.4946565655679673,
+      "sd_ce": 0.0037931964196296366,
+      "ppl_from_mean_ce": 4.4578053260846024,
+      "mean_targets": 268939264,
+      "mean_targets_per_second": 74704.49051003151,
+      "cache_equivalents": 0.5673917072346307
+    },
+    "xxl": {
+      "mean_ce": 1.5243872755504493,
+      "sd_ce": 0.009791749338541213,
+      "ppl_from_mean_ce": 4.592328874896681,
+      "mean_targets": 139277653.33333334,
+      "mean_targets_per_second": 38687.741953964134,
+      "cache_equivalents": 0.2938395246907237
+    }
+  },
+  "paired_mean_ce_delta_xxl_minus_xl": 0.0297307099824821,
+  "paired_t95_interval_assuming_normal_differences": [
+    -0.0016063194966383885,
+    0.061067739461602585
+  ],
+  "missing_artifacts": [
+    "analysis/followups/seed_validation/protocol.json",
+    "analysis/followups/seed_validation/paired_comparisons.json",
+    "analysis/followups/archived_validation/protocol.json",
+    "analysis/followups/archived_validation/paired_comparisons.json",
+    "runs/followups_1h/xl_full_1h_seed42/training_summary.json",
+    "runs/followups_1h/xl_full_1h_seed42/checkpoint.pt",
+    "runs/followups_1h/xxl_full_1h_seed42/training_summary.json",
+    "runs/followups_1h/xxl_full_1h_seed42/checkpoint.pt",
+    "runs/followups_1h/xl_full_1h_seed43/training_summary.json",
+    "runs/followups_1h/xl_full_1h_seed43/checkpoint.pt",
+    "runs/followups_1h/xxl_full_1h_seed43/training_summary.json",
+    "runs/followups_1h/xxl_full_1h_seed43/checkpoint.pt",
+    "runs/followups_1h/xl_full_1h_seed44/training_summary.json",
+    "runs/followups_1h/xl_full_1h_seed44/checkpoint.pt",
+    "runs/followups_1h/xxl_full_1h_seed44/training_summary.json",
+    "runs/followups_1h/xxl_full_1h_seed44/checkpoint.pt"
+  ],
+  "per_story_files_present": {
+    "analysis/followups/seed_validation": 0,
+    "analysis/followups/archived_validation": 0
+  },
+  "offline_protocol_independently_verified": false
+}

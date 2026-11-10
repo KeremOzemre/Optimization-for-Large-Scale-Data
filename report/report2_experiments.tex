@@ -1,0 +1,37 @@
+\begin{table*}[t]
+\centering
+\fontsize{9}{11}\selectfont
+\setlength{\tabcolsep}{4pt}
+\caption{Complete 20-run screen (seed 42, one hour; architectures in Table~\ref{tab:architectures}). Sampled validation workloads differ by family; cache-equivalents do not certify unique-data epochs. All historical test exports score 957,184 targets and 3,914,357 decoded bytes; these test results have already been inspected.}
+\label{tab:allscreen}
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Family & \shortstack{Stories\\(\%)} & \shortstack{Training\\targets (M)} & \shortstack{Cache\\equivalents} & \shortstack{Sampled\\val. CE} & \shortstack{Sampled\\val. PPL} & \shortstack{Full-test\\CE} & \shortstack{Full-test\\PPL} & \shortstack{Full-test\\BPB}\\
+\midrule
+Small & 25 & 971.956 & 8.206 & 1.845226 & 6.3295 & 1.842242 & 6.3107 & 0.649915\\
+Small & 50 & 985.485 & 4.159 & 1.842098 & 6.3098 & 1.839643 & 6.2943 & 0.648997\\
+Small & 75 & 940.806 & 2.647 & 1.838314 & 6.2859 & 1.837839 & 6.2829 & 0.648361\\
+Small & 100 & 984.326 & 2.077 & 1.838635 & 6.2880 & 1.833995 & 6.2588 & 0.647005\\
+\addlinespace[3pt]
+Medium & 25 & 719.073 & 6.071 & 1.655840 & 5.2375 & 1.650172 & 5.2079 & 0.582155\\
+Medium & 50 & 737.329 & 3.111 & 1.652656 & 5.2208 & 1.648475 & 5.1990 & 0.581556\\
+Medium & 75 & 738.320 & 2.078 & 1.646227 & 5.1874 & 1.643048 & 5.1709 & 0.579642\\
+Medium & 100 & 734.642 & 1.550 & 1.644364 & 5.1777 & 1.641483 & 5.1628 & 0.579090\\
+\addlinespace[3pt]
+Large & 25 & 563.151 & 4.754 & 1.550899 & 4.7157 & 1.547532 & 4.6999 & 0.545945\\
+Large & 50 & 557.892 & 2.354 & 1.547867 & 4.7014 & 1.544506 & 4.6857 & 0.544878\\
+Large & 75 & 562.012 & 1.581 & 1.546585 & 4.6954 & 1.540769 & 4.6682 & 0.543560\\
+Large & 100 & 562.430 & 1.187 & 1.546009 & 4.6927 & 1.539026 & 4.6601 & 0.542945\\
+\addlinespace[3pt]
+XL & 25 & 283.300 & 2.392 & 1.511787 & 4.5348 & 1.491843 & 4.4453 & 0.526299\\
+XL & 50 & 273.949 & 1.156 & 1.502522 & 4.4930 & 1.484568 & 4.4131 & 0.523732\\
+XL & 75 & 269.087 & 0.757 & 1.509920 & 4.5264 & 1.489011 & 4.4327 & 0.525300\\
+XL & 100 & 279.831 & 0.590 & 1.506811 & 4.5123 & 1.482373 & 4.4034 & 0.522958\\
+\addlinespace[3pt]
+XXL & 25 & 143.176 & 1.209 & 1.523338 & 4.5875 & 1.529087 & 4.6140 & 0.539438\\
+XXL & 50 & 148.185 & 0.625 & 1.515496 & 4.5517 & 1.518175 & 4.5639 & 0.535589\\
+XXL & 75 & 141.128 & 0.397 & 1.512485 & 4.5380 & 1.523112 & 4.5865 & 0.537330\\
+XXL & 100 & 143.655 & 0.303 & 1.510593 & 4.5294 & 1.517420 & 4.5604 & 0.535322\\
+\bottomrule
+\end{tabular}
+\end{table*}
