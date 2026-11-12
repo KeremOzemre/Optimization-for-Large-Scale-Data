@@ -1,0 +1,100 @@
+{
+  "experiment": {
+    "name": "xxl_full_1h_seed44",
+    "seed": 44,
+    "output_dir": "runs/followups_1h/xxl_full_1h_seed44"
+  },
+  "data": {
+    "dataset": "roneneldan/TinyStories",
+    "train_split": "train",
+    "heldout_split": "validation",
+    "test_ratio": 0.2,
+    "train_stories": null,
+    "validation_stories": null,
+    "test_stories": null,
+    "cache_dir": "data/tokens-full",
+    "preparation_seed": 42
+  },
+  "tokenizer": {
+    "name": "gpt2"
+  },
+  "model": {
+    "layers": 16,
+    "width": 1024,
+    "heads": 16,
+    "context_length": 256,
+    "dropout": 0.1
+  },
+  "training": {
+    "device": "cuda",
+    "precision": "bfloat16",
+    "time_limit_seconds": 3600,
+    "microbatch_size": 4,
+    "gradient_accumulation_steps": 4,
+    "log_interval_steps": 10,
+    "max_steps": null
+  },
+  "optimizer": {
+    "learning_rate": 0.0003,
+    "weight_decay": 0.1,
+    "betas": [
+      0.9,
+      0.95
+    ],
+    "gradient_clip": 1.0
+  },
+  "schedule": {
+    "warmup_fraction": 0.02,
+    "min_lr_ratio": 0.1,
+    "progress": "time"
+  },
+  "evaluation": {
+    "interval_seconds": 300,
+    "batches": 64,
+    "microbatch_size": 4,
+    "seed": 43
+  },
+  "generation": {
+    "prompt": "Once upon a time",
+    "max_new_tokens": 100,
+    "temperature": 0.8,
+    "top_k": 40,
+    "seed": 101
+  },
+  "runtime": {
+    "device": "cuda",
+    "hardware": "NVIDIA H100 NVL MIG 3g.47gb",
+    "precision": "bfloat16",
+    "vocab_size": 50257,
+    "parameter_count": 253085696,
+    "prepared_token_counts": {
+      "train": 473992236,
+      "val": 3808644,
+      "test": 957274
+    },
+    "validation_targets": 65536,
+    "tokens_per_step": 4096,
+    "target_training_tokens": null,
+    "git_commit": "0052a4b3add78b187776fb5f92e80ac6ea2a8d68",
+    "code_sha256": {
+      "run.py": "312b00496bec2493d4912f081c1537e9f2b224a8c300ace8ec6280ae1f9fb1bc",
+      "train.py": "1336d7b0c0d720c7113bb5e5895a9c69d600ec14400c8107f5c146b616850baa",
+      "prepare.py": "eb6f894d972badc763135aae6e6b39833191acc12e490891c6fce51ae6650949",
+      "model.py": "bad323a5e07431e160ac982613d621f711a648a06b4b70b954d5a79f4b28bcc0"
+    },
+    "data_sha256": {
+      "meta.json": "c384fb2515f9d970f09ae3177464cbbb3481a1826b7dba326c7412c77985f0dc",
+      "train.bin": "86d1b7da95a582e90b30d3e31e54b881cd9dbe51d525d3018622abb90dd3d3c2",
+      "val.bin": "0e253361384fdc1663cd11f8c7e2b81439c087db29dc407a2760859fbb7d053d",
+      "test.bin": "6c8c7b379ee01474f12e156aa6e276d414338fb88b6c544de5399ee2fdc76627"
+    },
+    "python": "3.14.8",
+    "packages": {
+      "torch": "2.9.1+cu126",
+      "numpy": "2.5.4",
+      "tiktoken": "0.14.0",
+      "datasets": "5.1.0"
+    },
+    "cuda_version": "12.6"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "interpretation": "Positive B-A favours A. Story-resampling intervals condition on fixed checkpoints; cross-story context and duplicate stories may induce dependence. They do not measure training-seed uncertainty. Intervals are unadjusted for multiple comparisons.",
+  "comparisons": [
+    {
+      "a": "large_data100",
+      "b": "xl_data50",
+      "delta_b_minus_a": -0.055865680010432024,
+      "ci95_low": -0.05659827627640991,
+      "ci95_high": -0.055064763455592663,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "large_data100",
+      "b": "xl_data100",
+      "delta_b_minus_a": -0.05766341135384929,
+      "ci95_low": -0.058424754179456403,
+      "ci95_high": -0.05693753717332154,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "large_data100",
+      "b": "xxl_data100",
+      "delta_b_minus_a": -0.023378105964133096,
+      "ci95_low": -0.024091748121022088,
+      "ci95_high": -0.02264112432050981,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xl_data50",
+      "b": "xl_data100",
+      "delta_b_minus_a": -0.0017977313434172683,
+      "ci95_low": -0.0025004791717735076,
+      "ci95_high": -0.001124777172242078,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xl_data50",
+      "b": "xxl_data100",
+      "delta_b_minus_a": 0.03248757404629892,
+      "ci95_low": 0.03170746379424788,
+      "ci95_high": 0.03319669989089544,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xl_data100",
+      "b": "xxl_data100",
+      "delta_b_minus_a": 0.03428530538971619,
+      "ci95_low": 0.03357119012544086,
+      "ci95_high": 0.03501007894578644,
+      "bootstrap_repeats": 1000
+    }
+  ]
+}
