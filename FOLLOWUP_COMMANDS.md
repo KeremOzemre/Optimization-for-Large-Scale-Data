@@ -1,5 +1,14 @@
 # Focused TinyStories follow-up commands
 
+> **Status update (13 November 2026).** All stages below are complete. Stage 3
+> (the equal-token XL/XXL pair) and a reduced learning-rate XXL run have been
+> trained and scored; results are in `analysis/followups/equal_token_143m_validation/`
+> and `analysis/followups/lr_validation/`. The evaluation artifacts described
+> as missing below (`protocol.json`, `paired_comparisons.json`, per-story `.npz`,
+> `training_summary.json`) are now in this repository and on the Hugging Face
+> checkpoint repository. Text below that says "pending" or "recover" is kept as
+> a record of the plan at the time.
+
 The main question remains: **which tested model predicts TinyStories best after
 one hour on the same GPU allocation, using our shared training recipe?**
 The original 20-run grid is exploratory evidence. Prioritize common validation

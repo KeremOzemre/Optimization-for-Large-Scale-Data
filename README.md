@@ -94,7 +94,7 @@ To regenerate every number and figure in the report without retraining:
 ```bash
 python eval_hf.py                        # downloads each checkpoint, test loss / ppl / bits-per-byte, story samples
 python analyze.py --runs-dir results     # summary.csv, summary_table.md, figures into analysis/
-python score_checkpoints.py              # scores the follow-up checkpoints on the common validation set
+python score_checkpoints.py --checkpoints <paths to checkpoint.pt> --data-dir data/tokens-full --device cuda --precision float32 --output-dir analysis/followups/<name>   # full commands per experiment in FOLLOWUP_COMMANDS.md
 python analyze_followups.py              # builds analysis/followups/ tables and figures
 ```
 
@@ -110,4 +110,4 @@ python run.py train   --config configs/experiments/<name>.yaml
 The experiment configs are produced by `python create_experiments.py` from
 `configs/default.yaml`; the training recipe (AdamW, lr 3e-4, weight decay 0.1,
 betas 0.9/0.95, clip 1.0, 2 % time-based warmup then cosine to 10 % of peak,
-context 256, dropout 0.1) is the same for all twenty runs.
+context 256, dropout 0.1) is the same for all runs except where a follow-up config changes it (learning rate, step-based schedule).
