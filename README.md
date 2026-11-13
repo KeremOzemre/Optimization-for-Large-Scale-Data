@@ -111,3 +111,14 @@ The experiment configs are produced by `python create_experiments.py` from
 `configs/default.yaml`; the training recipe (AdamW, lr 3e-4, weight decay 0.1,
 betas 0.9/0.95, clip 1.0, 2 % time-based warmup then cosine to 10 % of peak,
 context 256, dropout 0.1) is the same for all runs except where a follow-up config changes it (learning rate, step-based schedule).
+
+## Authors
+
+DSA4212 Optimisation for Large-Scale Data-Driven Inference, National University of Singapore, AY2026/27 Semester 1.
+
+| Name | Student number |
+|------|----------------|
+| Kerem Ozemre | A0350378Y |
+| Tonio Kowalke | A0350429E |
+| Steffany Lara | A0350565H |
+| Ahmed Haj Hassine | A0342398U |

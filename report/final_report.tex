@@ -466,4 +466,15 @@ Code and archived weights are available in the
 \href{https://github.com/KeremOzemre/Optimization-for-Large-Scale-Data}{project repository}
 and \href{https://huggingface.co/dsa4212-tinystories/tinystories-nanogpt}{checkpoint repository}.
 This revision adds three follow-up training runs (the matched-target XL/XXL pair and a reduced-rate XXL run); no earlier checkpoints were retrained. Checkpoints of the four budget/context extensions were not retained; their logs and configurations are in \path{runs/}.
+
+\section{Use of AI tools}
+
+We used Claude (Anthropic) as a review assistant, asking it to cross-check a draft of this report against the assessment rubric and the assignment requirements and to flag errors, omissions, and points worth clarifying. The authors verified every suggestion against the code and results and understand all submitted material; the model generated no experimental results. Acting on its review, we tested and incorporated the following:
+\begin{itemize}\itemsep2pt
+  \item Documented the evaluation protocol more fully (common-validation counts, scoring windows, checkpoint manifest) and stated which provenance details remain unpinned.
+  \item Tempered the statistical claim: with three seed pairs the paired $t$ interval includes zero, so we report a repeatable direction, not significance.
+  \item Made the depth/width/head and per-family learning-rate confounds explicit (no per-size optimiser search was performed).
+  \item Separated the budget and context extensions as confounded variants that change several conditions at once.
+  \item Flagged that the ${\sim}2.9\%$ perplexity gain has no measured translation into story quality, and that blind ratings remain pending.
+\end{itemize}
 \end{document}
