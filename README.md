@@ -146,5 +146,4 @@ We used Claude (Anthropic) as a review assistant, asking it to cross-check a dra
 - Made the depth/width/head and per-family learning-rate confounds explicit (no per-size optimiser search was performed).
 - Separated the budget and context extensions as confounded variants that change several conditions at once.
 - Flagged that the ~2.9% perplexity gain has no measured translation into story quality, and that blind ratings remain pending.
-=======
->>>>>>> 582b1295da054902c6dbe0af6047310c8f0544a2
+
