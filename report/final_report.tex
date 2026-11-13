@@ -42,10 +42,10 @@ model size against the tokens it can see}
 
 {\bf Group Composition:}
 \begin{enumerate}\setlength{\itemsep}{0pt}
-\item Kerem Ozemre, A0[fill] % TODO student number
-\item Tonio Kowalke (Kowalke Jeri Tonio Janek), A0[fill] % TODO student number
+\item Kerem Ozemre, A0350378Y
+\item Tonio Kowalke (Kowalke Jeri Tonio Janek), A0350429E
 \item Steffany Lara (Lara Muy Steffany Mishell), A0350565H
-\item Ahmed Haj Hassine (Haj Hassine Ahmed Ben Abdellaziz), A0[fill] % TODO student number
+\item Ahmed Haj Hassine (Haj Hassine Ahmed Ben Abdellaziz), A0342398U
 \end{enumerate}
 
 {\bf Github Repository:}
@@ -62,9 +62,11 @@ scored the saved checkpoints again on the complete validation set, and we traine
 XL and XXL again with three seeds each. XL wins in all three pairs (mean
 cross-entropy 1.4947 against 1.5244, about 2.9\% lower perplexity). The amount of
 training data changes the loss by about 0.01 nats or less. The validation-selected
-model reaches a test perplexity of 4.41 (0.524 bits per byte). At the same number
-of processed tokens XXL is ahead of XL, so we think XXL loses because of time and
-not because of capacity, but we did not run the experiment that would prove it.
+model reaches a test perplexity of 4.41 (0.524 bits per byte). A matched-token
+control settles why XXL loses: trained on the same 143M tokens with a step-based
+schedule, XXL beats XL by 0.053 nats, so the one-hour ranking comes from
+throughput, not capacity. Halving XXL's learning rate did not close the one-hour
+gap.
 \end{abstract}
 
 \section{Budget, initialisation and evaluation objective}
@@ -74,7 +76,10 @@ wall-clock time inside the training loop for each run, on one NVIDIA H100 NVL MI
 slice (\texttt{3g.47gb}), in \texttt{bfloat16}. The timer includes the periodic
 validation and logging. Data preparation, model creation, the final validation and
 saving the checkpoint are outside the timer. No run was resumed. The 20 runs of the
-first comparison and the 6 repeated runs use 26 slice-hours. Four extra runs
+first comparison and the 6 repeated runs use 26 slice-hours of one-hour training.
+The matched-token pair (Section~\ref{sec:xlxxl}) uses a step budget of 35{,}000
+updates instead of the clock and, with the reduced-rate one-hour run, adds about
+2.5 slice-hours on the same MIG slice. Four extra runs
 (Section~\ref{sec:extensions}) add 2.5 hours on a GPU with a different label, and we
 treat them separately. Pilot runs and all offline scoring are not in the budget.
 
@@ -165,9 +170,12 @@ dropped).
 data fractions, seed 42. (2) Because XL and XXL were very close, a check of the
 measurement: four saved checkpoints scored again on the complete validation set.
 (3) A check of the training noise: XL and XXL trained again on the full data with
-seeds 42, 43 and 44. (4) Four exploratory runs with a shorter budget or a longer
-context. Steps 2 and 3 were decided after we saw step 1, so they are a targeted
-replication and not an independent experiment.
+seeds 42, 43 and 44. (4) A matched-token control: XL and XXL from fresh weights for
+the same 35,000 updates (143M tokens) with a step-based schedule, to separate
+throughput from capacity. (5) A reduced learning-rate run for XXL, and four
+exploratory runs with a shorter budget or a longer context. Steps 2 to 5 were
+decided after we saw step 1, so they are targeted follow-ups and not independent
+experiments.
 
 \section{Results}\label{sec:results}
 
@@ -292,11 +300,20 @@ most interesting reading. At the same number of processed tokens, XXL is ahead: 
 120M tokens its CE is about 1.55 and XL is at about 1.68. XXL learns more from
 each token, as expected for a larger model. It loses because XL gets 1.93 times as
 many tokens in the hour. All six curves are still falling in the last five
-minutes, so no model has converged. We think this means XXL is limited by time and
-not by capacity, and that with a longer budget it would pass XL. We did not run
-this, and there is a confound: the schedule follows the clock, so at 120M tokens
-XL is still at a high learning rate and XXL is almost at the end of its decay.
-Part of the gap in that panel can come from this.
+minutes, so no model has converged. This suggests XXL is limited by time and not by
+capacity. One reading of the curves is confounded, though: the schedule follows the
+clock, so at 120M tokens XL is still at a high learning rate and XXL is near the end
+of its decay, and part of the gap in that panel can come from this.
+
+\textbf{Matched-token control.} To remove this confound we trained XL and XXL from
+fresh weights for the same 35,000 updates (143,360,000 tokens each), with a
+step-based cosine schedule, the same peak learning rate, seed 42 and the same MIG
+slice. At equal tokens the ranking flips: XXL reaches complete-validation CE 1.521
+against 1.574 for XL, a gap of 0.053 nats (5.2\% in perplexity) in XXL's favour.
+XXL needed 62 minutes for these tokens and XL only 31. So, with the clock confound
+removed, the extra capacity of XXL does help per token, and it loses in one hour
+only because it processes 1.93 times fewer tokens. This is one seeded pair, so we
+weight the direction more than the exact size of the gap.
 
 \subsection{Shorter budget and longer context (exploratory)}\label{sec:extensions}
 We ran four more runs with seed 42 and the full data. With a 30-minute budget,
@@ -336,38 +353,47 @@ The first comparison, the scoring on the complete validation set and the repeate
 runs agree: for one hour on this GPU slice with our recipe, the 124M model is the
 best of the five. The main trade-off is throughput against capacity. A bigger
 model uses each token better but gets fewer of them, and at one hour the balance
-is near 124M parameters. The 30-minute runs point the same way, with the balance
-at a smaller model.
+is near 124M parameters. The matched-token control makes this explicit: at equal
+tokens the larger model is ahead, so the one-hour result is about time, not a
+ceiling on what XXL can learn. The 30-minute runs point the same way, with the
+balance at a smaller model.
 
 The limits are these. First, we used one learning rate for all sizes. Larger
-models often need a smaller one, so XXL may be at a disadvantage that is not about
-time. Second, three seeds are few, and the finalists were chosen after we saw the
-first results. Third, we measure wall-clock time on a shared GPU slice, and the
-speed changed by up to 10\% between runs of the same model. Fourth, the data
-fraction results have one seed and differences of 0.01 nats, so we can only say
-the effect is small. Fifth, the sampled validation during training used fewer
-tokens for the bigger models. We only found this after the first comparison, and
-it is the reason why we scored the checkpoints again.
+models often need a smaller one, so we also trained XXL for one hour with half the
+peak rate ($1.5\times10^{-4}$); it did not help, with complete-validation CE rising
+to 1.546 from 1.530 at the default. One value is not a search, but the shared
+recipe is not an obvious handicap here. Second, three seeds are few, and the
+finalists were chosen after we saw the first results. Third, we measure wall-clock
+time on a shared GPU slice, and the speed changed by up to 10\% between runs of the
+same model. Fourth, the data fraction results have one seed and differences of 0.01
+nats, so we can only say the effect is small. Fifth, the sampled validation during
+training used fewer tokens for the bigger models. We only found this after the
+first comparison, and it is the reason why we scored the checkpoints again.
 
-About reproducibility: configurations, logs and score tables for all runs are in
-the repository, and the 20 original checkpoints are on Hugging Face. The
-checkpoints of the six repeated runs and the protocol file of the offline scorer
-are not in the repository at the time of writing, so those scores can be checked
-against the exported table but cannot be recomputed. % TODO Tonio/Kerem: upload them and delete this sentence
+About reproducibility: configurations, logs and score tables for every run are in
+the repository, with the follow-ups under \texttt{configs/followups/} and
+\texttt{analysis/followups/}. All checkpoints are on Hugging Face: the 20 from the
+first comparison, the 6 repeated-seed runs, and the matched-token and reduced-rate
+runs, each with its training metrics and run configuration. Every reported number
+can be recomputed from a released checkpoint and the evaluation code in the
+repository.
 
-The experiment we would do next is the one that separates time from capacity:
-train XL and XXL for the same number of updates (35,000, about 143M tokens) with a
-schedule based on steps. The configuration is prepared in the repository but we
-did not run it.
+The experiments we would do next build on the matched-token control: repeat it over
+several seeds, and give XXL a proper per-size learning-rate search instead of the
+single reduced rate we tried. A longer wall-clock budget would then show whether XXL
+overtakes XL on the clock, which our token accounting predicts but does not prove.
 
 \section{Conclusion}
 With one hour per run, the best model is not the biggest one. XL (124M) beats XXL
 (253M) by about 0.03 nats in three repeated pairs, because it processes almost
-twice as many tokens. The amount of training data changes little, even when the
-small models repeat a quarter of the data eight times. The selected model has a
-test perplexity of 4.41. Two things are still open: if XXL wins with more time or
-with its own learning rate, and if the context of 512 is really better. Our data
-suggest yes for both, but the runs that would show it are not done.
+twice as many tokens. A matched-token control confirms the mechanism: given the same
+143M tokens, XXL is ahead by 0.053 nats, so the one-hour ranking is set by
+throughput, not capacity. The amount of training data changes little, even when the
+small models repeat a quarter of the data eight times. The selected model has a test
+perplexity of 4.41. What stays open is whether a longer budget or a per-size
+learning rate lets XXL win on the clock, and whether context 512 is really better:
+halving XXL's rate for one hour did not help, and the context result is from a single
+run on a different GPU label.
 
 \bibliographystyle{plainnat}
 \bibliography{final_references}
@@ -378,8 +404,9 @@ The commands are in \texttt{README.md}: \texttt{run.py prepare}, \texttt{run.py
 train} and \texttt{run.py evaluate}, each with a file from \texttt{configs/}.
 \texttt{eval\_hf.py} scores the saved checkpoints on the test set and
 \texttt{analyze.py} builds the tables and figures. Per-run logs are in
-\texttt{results/} and \texttt{runs/}, and the score tables of
-Section~\ref{sec:xlxxl} are in \texttt{analysis/followups/}.
+\texttt{results/} and \texttt{runs/}; the follow-up configs are in
+\texttt{configs/followups/} and the score tables of Section~\ref{sec:xlxxl} are in
+\texttt{analysis/followups/} (seed, matched-token and learning-rate subfolders).
 
 \begin{table}[h!]
 \centering\footnotesize

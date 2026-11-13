@@ -1,0 +1,125 @@
+{
+  "interpretation": "Positive B-A favours A. Story-resampling intervals condition on fixed checkpoints; cross-story context and duplicate stories may induce dependence. They do not measure training-seed uncertainty. Intervals are unadjusted for multiple comparisons.",
+  "comparisons": [
+    {
+      "a": "xl_full_1h_seed42",
+      "b": "xxl_full_1h_seed42",
+      "delta_b_minus_a": 0.03941690292967051,
+      "ci95_low": 0.03873499917788384,
+      "ci95_high": 0.04021871646744373,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xl_full_1h_seed42",
+      "b": "xl_full_1h_seed43",
+      "delta_b_minus_a": 0.005589222199625911,
+      "ci95_low": 0.004960253541230474,
+      "ci95_high": 0.006263622820432169,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xl_full_1h_seed42",
+      "b": "xxl_full_1h_seed43",
+      "delta_b_minus_a": 0.03989849902101043,
+      "ci95_low": 0.039193681328988206,
+      "ci95_high": 0.04062986529783108,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xl_full_1h_seed42",
+      "b": "xl_full_1h_seed44",
+      "delta_b_minus_a": 0.0072370725387091986,
+      "ci95_low": 0.0064960910577702554,
+      "ci95_high": 0.007901542144801588,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xl_full_1h_seed42",
+      "b": "xxl_full_1h_seed44",
+      "delta_b_minus_a": 0.02270302273510045,
+      "ci95_low": 0.02203514136789956,
+      "ci95_high": 0.02344093612538711,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xxl_full_1h_seed42",
+      "b": "xl_full_1h_seed43",
+      "delta_b_minus_a": -0.0338276807300446,
+      "ci95_low": -0.03450388965624073,
+      "ci95_high": -0.033110038790875984,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xxl_full_1h_seed42",
+      "b": "xxl_full_1h_seed43",
+      "delta_b_minus_a": 0.0004815960913399236,
+      "ci95_low": -0.00020020007939403636,
+      "ci95_high": 0.001189748637498075,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xxl_full_1h_seed42",
+      "b": "xl_full_1h_seed44",
+      "delta_b_minus_a": -0.03217983039096131,
+      "ci95_low": -0.03293323148888589,
+      "ci95_high": -0.03142978423553426,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xxl_full_1h_seed42",
+      "b": "xxl_full_1h_seed44",
+      "delta_b_minus_a": -0.016713880194570062,
+      "ci95_low": -0.017447203511516598,
+      "ci95_high": -0.01599236620662789,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xl_full_1h_seed43",
+      "b": "xxl_full_1h_seed43",
+      "delta_b_minus_a": 0.03430927682138452,
+      "ci95_low": 0.033607104449017496,
+      "ci95_high": 0.0350521583601225,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xl_full_1h_seed43",
+      "b": "xl_full_1h_seed44",
+      "delta_b_minus_a": 0.0016478503390832885,
+      "ci95_low": 0.0008985064137792151,
+      "ci95_high": 0.00236778375152987,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xl_full_1h_seed43",
+      "b": "xxl_full_1h_seed44",
+      "delta_b_minus_a": 0.017113800535474538,
+      "ci95_low": 0.01640354393081165,
+      "ci95_high": 0.017863805618875364,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xxl_full_1h_seed43",
+      "b": "xl_full_1h_seed44",
+      "delta_b_minus_a": -0.032661426482301234,
+      "ci95_low": -0.03341866544221222,
+      "ci95_high": -0.03195776585327245,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xxl_full_1h_seed43",
+      "b": "xxl_full_1h_seed44",
+      "delta_b_minus_a": -0.017195476285909988,
+      "ci95_low": -0.017922633935914405,
+      "ci95_high": -0.01644415608141795,
+      "bootstrap_repeats": 1000
+    },
+    {
+      "a": "xl_full_1h_seed44",
+      "b": "xxl_full_1h_seed44",
+      "delta_b_minus_a": 0.01546595019639125,
+      "ci95_low": 0.014760541521051383,
+      "ci95_high": 0.016184241746159875,
+      "bootstrap_repeats": 1000
+    }
+  ]
+}

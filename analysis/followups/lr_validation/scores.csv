@@ -1,0 +1,2 @@
+run,checkpoint_sha256,training_seed,tokens_processed,training_seconds,training_hardware,training_data_sha256,parameters,loss,perplexity,scored_targets
+xxl_full_1h_lr15e-5_seed42,dc5cbd9c21b6eea67c5584ff34dae74024714a7d540d2cf25b15d0d301bd960e,42,136511488,3600.0291547439992,NVIDIA H100 NVL MIG 3g.47gb,86d1b7da95a582e90b30d3e31e54b881cd9dbe51d525d3018622abb90dd3d3c2,253085696,1.545890602904488,4.692148607908762,3808643

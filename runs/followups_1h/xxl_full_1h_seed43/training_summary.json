@@ -1,0 +1,10 @@
+{
+  "steps": 32550,
+  "tokens_processed": 133324800,
+  "stop_reason": "time_limit",
+  "training_seconds": 3600.101482697064,
+  "final_validation_seconds": 0.5427971689496189,
+  "checkpoint_save_seconds": 5.552360363071784,
+  "val_loss": 1.531342078000307,
+  "val_perplexity": 4.62437893674427
+}

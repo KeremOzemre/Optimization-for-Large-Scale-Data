@@ -1,0 +1,54 @@
+{
+  "repo_id": "dsa4212-tinystories/tinystories-nanogpt",
+  "revision": "fa18888b1b9b599e9deb455ca740896e7d0642f3",
+  "files": {
+    "large_data100/checkpoint.pt": {
+      "bytes": 612515411,
+      "sha256": "d8333dae6361fbb2c32caf8a3b474d2e98ba304dc9688fa29476fc4568a033cd"
+    },
+    "large_data100/run_config.json": {
+      "bytes": 1432,
+      "sha256": "697c145e0c6b18547ef2391bd20e96b63af4418607c868dd17b4efb492b0e8d5"
+    },
+    "large_data100/metrics.csv": {
+      "bytes": 1283962,
+      "sha256": "1e66c2de358ac79e840a97970f01e278c5ddfebb54e6ded0d5d41f0998b67aaf"
+    },
+    "xl_data50/checkpoint.pt": {
+      "bytes": 1485074515,
+      "sha256": "28cbecd9641e557170a7995c43241eca32d42eb10adbb97380a2043c9fe75802"
+    },
+    "xl_data50/run_config.json": {
+      "bytes": 1428,
+      "sha256": "2c47c24edf1a55d289d31a9e78094163c49e26566a6cc92cc51158e13fd00ce3"
+    },
+    "xl_data50/metrics.csv": {
+      "bytes": 616970,
+      "sha256": "36ac4ea90723c462f5b51c0449874f7ea1d01d0d4183bc5e8f07759e4d5a4491"
+    },
+    "xl_data100/checkpoint.pt": {
+      "bytes": 1485074515,
+      "sha256": "2728133d9b5210415fe0f18a71a92c25da85f1356cf042372e34b508bbab93ca"
+    },
+    "xl_data100/run_config.json": {
+      "bytes": 1428,
+      "sha256": "e061a787b3f33a522e875f17cedfc38645384a529a82854ca2ad36d7b7927fc7"
+    },
+    "xl_data100/metrics.csv": {
+      "bytes": 630335,
+      "sha256": "f67ffb79a8519cf285dd076b029fef366af29b330977b2ede4b719cf6d8fd539"
+    },
+    "xxl_data100/checkpoint.pt": {
+      "bytes": 3037160019,
+      "sha256": "50e05760e014b2c2d7db3cf050a5ebd95aca8ccbb363c3802091cc5107fd2c4c"
+    },
+    "xxl_data100/run_config.json": {
+      "bytes": 1431,
+      "sha256": "97a7c4df147d14706905e9d021afd1fade521992161b47c4198af51c8759c440"
+    },
+    "xxl_data100/metrics.csv": {
+      "bytes": 323689,
+      "sha256": "b82a18b12dfab34b9ad6203f0f1e9d4cb10bdc991a1a8173c7a57cf0ccd8bb9e"
+    }
+  }
+}

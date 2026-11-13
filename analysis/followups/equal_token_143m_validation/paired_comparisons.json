@@ -1,0 +1,13 @@
+{
+  "interpretation": "Positive B-A favours A. Story-resampling intervals condition on fixed checkpoints; cross-story context and duplicate stories may induce dependence. They do not measure training-seed uncertainty. Intervals are unadjusted for multiple comparisons.",
+  "comparisons": [
+    {
+      "a": "xl_full_equal_tokens_seed42",
+      "b": "xxl_full_equal_tokens_seed42",
+      "delta_b_minus_a": -0.05336347021392829,
+      "ci95_low": -0.053948373609271176,
+      "ci95_high": -0.052827339021305514,
+      "bootstrap_repeats": 1000
+    }
+  ]
+}
