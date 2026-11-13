@@ -422,11 +422,7 @@ from the aggregate rows.
 The four archived checkpoint identifiers match the downloaded-baseline manifest.
 All historical tests were already inspected.
 
-<<<<<<< HEAD
 We then ran the prepared equal-target pair: 35,000 updates (143,360,000 targets) with matched step-based warmup/cosine schedules for fresh XL and XXL models, seed 42, on the recorded MIG allocation. At equal targets the ranking reverses: XXL reaches full-validation CE 1.5209 (PPL 4.5763) against 1.5743 (PPL 4.8272) for XL, a 0.0534-nat advantage for XXL, while needing about 62 minutes against 31 for XL. This addresses the schedule mismatch at equal exposure and indicates that XL's one-hour lead reflects exposure under the time budget rather than a capacity ceiling; it is a single seeded pair. A single reduced-rate probe (XXL at half the peak learning rate, $1.5\times10^{-4}$, one hour) did not help: full-validation CE 1.5459 against 1.5298 at the default, and a single value is not a per-size learning-rate search. Four-hour extensions and capability checks remain pending.
-=======
-We then ran the prepared equal-target pair: 35,000 updates (143,360,000 targets) with matched step-based warmup/cosine schedules for fresh XL and XXL models, seed 42, on the recorded MIG allocation. At equal targets the ranking reverses: XXL reaches full-validation CE 1.5209 (PPL 4.5763) against 1.5743 (PPL 4.8272) for XL, a 0.0534-nat advantage for XXL, while needing about 62 minutes against 31 for XL. This addresses the schedule mismatch at equal exposure and indicates that XL's one-hour lead reflects exposure under the time budget rather than a capacity ceiling; it is a single seeded pair. A single reduced-rate probe (XXL at half the peak learning rate, $1.5	imes10^{-4}$, one hour) did not help: full-validation CE 1.5459 against 1.5298 at the default, so one value is not a per-family search. Four-hour extensions and capability checks remain pending.
->>>>>>> bac3f4912ef367536c263789371d2b366d5d863c
 
 \section{Conclusion}
 
