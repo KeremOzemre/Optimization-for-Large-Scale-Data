@@ -1,3 +1,16 @@
+
+## Authors
+
+DSA4212 Optimisation for Large-Scale Data-Driven Inference, National University of Singapore, AY2026/27 Semester 1.
+
+| Name | Student number |
+|------|----------------|
+| Kerem Ozemre | A0350378Y |
+| Tonio Kowalke | A0350429E |
+| Steffany Lara | A0350565H |
+| Ahmed Haj Hassine | A0342398U |
+
+
 # TinyStories GPT from scratch
 
 A small, single-device GPT language model trained on [TinyStories](https://huggingface.co/datasets/roneneldan/TinyStories). Its model architecture and initialization are adapted from [Andrej Karpathy's nanoGPT, commit `3adf61e154c3fe3fca428ad6bc3818b27a3b8291`](https://github.com/karpathy/nanoGPT/tree/3adf61e154c3fe3fca428ad6bc3818b27a3b8291), under the included [MIT license](LICENSE). Training starts with random weights. See [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) for the research question, confirmed decisions, and current limitations.
@@ -111,14 +124,3 @@ The experiment configs are produced by `python create_experiments.py` from
 `configs/default.yaml`; the training recipe (AdamW, lr 3e-4, weight decay 0.1,
 betas 0.9/0.95, clip 1.0, 2 % time-based warmup then cosine to 10 % of peak,
 context 256, dropout 0.1) is the same for all runs except where a follow-up config changes it (learning rate, step-based schedule).
-
-## Authors
-
-DSA4212 Optimisation for Large-Scale Data-Driven Inference, National University of Singapore, AY2026/27 Semester 1.
-
-| Name | Student number |
-|------|----------------|
-| Kerem Ozemre | A0350378Y |
-| Tonio Kowalke | A0350429E |
-| Steffany Lara | A0350565H |
-| Ahmed Haj Hassine | A0342398U |
