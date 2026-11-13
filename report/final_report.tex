@@ -64,8 +64,7 @@ cross-entropy 1.4947 against 1.5244, about 2.9\% lower perplexity). The amount o
 training data changes the loss by about 0.01 nats or less. The validation-selected
 model reaches a test perplexity of 4.41 (0.524 bits per byte). A matched-token
 control settles why XXL loses: trained on the same 143M tokens with a step-based
-schedule, XXL beats XL by 0.053 nats, so the one-hour ranking comes from
-throughput, not capacity. Halving XXL's learning rate did not close the one-hour
+schedule, XXL beats XL by 0.053 nats, so XXL runs out of clock, not of capacity. Halving XXL's learning rate did not close the one-hour
 gap.
 \end{abstract}
 
