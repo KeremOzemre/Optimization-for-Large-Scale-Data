@@ -126,24 +126,24 @@ betas 0.9/0.95, clip 1.0, 2 % time-based warmup then cosine to 10 % of peak,
 context 256, dropout 0.1) is the same for all runs except where a follow-up config changes it (learning rate, step-based schedule).
 <<<<<<< HEAD
 
-## Authors
-
-DSA4212 Optimisation for Large-Scale Data-Driven Inference, National University of Singapore, AY2026/27 Semester 1.
-
-| Name | Student number |
-|------|----------------|
-| Kerem Ozemre | A0350378Y |
-| Tonio Kowalke | A0350429E |
-| Steffany Lara | A0350565H |
-| Ahmed Haj Hassine | A0342398U |
-
 ## Use of AI tools
 
-We used Claude (Anthropic) as a review assistant, asking it to cross-check a draft of the report against the assessment rubric and the assignment requirements and to flag errors, omissions, and points worth clarifying. The authors verified every suggestion against the code and results and understand all submitted material; the model generated no experimental results. Acting on its review, we tested and incorporated the following changes to make the account more complete and honest:
+We used Claude (Anthropic) during the project. This is what it did and what we did with it.
 
-- Documented the evaluation protocol more fully (common-validation counts, scoring windows, checkpoint manifest) and stated which provenance details remain unpinned.
-- Tempered the statistical claim: with three seed pairs the paired *t* interval includes zero, so we report a repeatable direction, not significance.
-- Made the depth/width/head and per-family learning-rate confounds explicit (no per-size optimiser search was performed).
-- Separated the budget and context extensions as confounded variants that change several conditions at once.
-- Flagged that the ~2.9% perplexity gain has no measured translation into story quality, and that blind ratings remain pending.
+**What it wrote or drafted.** It checked several versions of the report and the repository against the course guidelines and the rubric, and listed what was missing or inconsistent. It did not run any experiment and it produced no result. All training and scoring was run by us on the NUS cluster.
 
+**Suggestions we accepted and tested.**
+
+- *Equal-token comparison of XL and XXL.* The report said that XXL loses in one hour because it sees half the tokens, but we had not tested it. Claude pointed out that the config for this run was already prepared and suggested running it. We ran it. At 143M tokens XXL is ahead (CE 1.5209 against 1.5743), so the result supports the explanation. It is one pair with one seed.
+- *A lower learning rate for XXL.* Claude suggested that sharing one learning rate could hurt the largest model, and proposed one run at half the rate. We ran it and it was worse (CE 1.5459 against 1.5298). So this idea was not supported, and we report it as a negative result.
+- *More sources.* It suggested papers on compute allocation and budgeted training that we had not cited. We read them and kept the ones we use in the text.
+
+**Suggestions that were wrong or that we rejected.**
+
+- An early draft written with Claude said that the data fraction does not matter because no run finishes one pass over the data. Our token audit showed the opposite: 15 of the 20 runs process more tokens than their training subset, and Small with 25% of the data goes through it about 8 times. We removed the claim.
+- At the start Claude proposed comparing the Muon and AdamW optimisers as the main question. We dropped it because that comparison already exists in the course material, and chose model size against data instead.
+- It suggested two more runs (XL without dropout, and repeating the 30-minute and context-512 runs on the same GPU slice). We did not run them, and the report lists them as open points.
+
+**Where it corrected us.** In our group notes we had written that XXL "overfitted". Claude noted that XXL sees only 0.3 of the training set in one hour, so it cannot be overfitting. The seed runs and the equal-token pair agree with this.
+
+We checked the numbers in the report against the saved result files, and we understand everything we submit.
