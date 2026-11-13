@@ -52,25 +52,25 @@ model size against the tokens it can see}
 \href{https://github.com/KeremOzemre/Optimization-for-Large-Scale-Data}{github.com/KeremOzemre/\allowbreak Optimization-for-Large-Scale-Data}
 
 \begin{abstract}
-\noindent We train GPT models from random weights on TinyStories. Each run gets one hour on
-the same GPU slice. We first compare five model sizes (16M to 253M parameters) and
-four fractions of the training data, 20 runs in total. The 124M model (XL) has the
-lowest loss. The 253M model (XXL) is not better, although it has twice the
-parameters, because in one hour it processes only half as many tokens. The first
-comparison had one seed and unequal validation samples, so we checked it twice: we
-scored the saved checkpoints again on the complete validation set, and we trained
-XL and XXL again with three seeds each. XL wins in all three pairs (mean
-cross-entropy 1.4947 against 1.5244, about 2.9\% lower perplexity). The amount of
-training data changes the loss by about 0.01 nats or less. The validation-selected
-model reaches a test perplexity of 4.41 (0.524 bits per byte). A matched-token
-control settles why XXL loses: trained on the same 143M tokens with a step-based
-schedule, XXL beats XL by 0.053 nats, so XXL runs out of clock, not of capacity.
-Halving XXL's learning rate did not close the one-hour gap.
+\noindent GPT models are trained from random weights on TinyStories, each run for one hour
+on the same GPU slice. A first comparison spans five model sizes (16M to 253M
+parameters) and four fractions of the training data, 20 runs in total. The 124M
+model (XL) has the lowest loss. The 253M model (XXL) is not better, although it has
+twice the parameters, because in one hour it processes only half as many tokens.
+The first comparison had one seed and unequal validation samples, so it was checked
+twice: the saved checkpoints were scored again on the complete validation set, and
+XL and XXL were trained again with three seeds each. XL wins in all three pairs
+(mean cross-entropy 1.4947 against 1.5244, about 2.9\% lower perplexity). The amount
+of training data changes the loss by about 0.01 nats or less. The
+validation-selected model reaches a test perplexity of 4.41 (0.524 bits per byte).
+A matched-token control settles why XXL loses: trained on the same 143M tokens with
+a step-based schedule, XXL beats XL by 0.053 nats, so XXL runs out of clock, not of
+capacity. Halving XXL's learning rate did not close the one-hour gap.
 \end{abstract}
 
 \section{Budget, initialisation and evaluation objective}
 \label{sec:budget}
-\textbf{Budget.} We fixed the budget before the final runs: 3600 seconds of
+\textbf{Budget.} The budget was fixed before the final runs: 3600 seconds of
 wall-clock time inside the training loop for each run, on one NVIDIA H100 NVL MIG
 slice (\texttt{3g.47gb}), in \texttt{bfloat16}. The timer includes the periodic
 validation and logging. Data preparation, model creation, the final validation and
@@ -79,23 +79,23 @@ first comparison and the 6 repeated runs use 26 slice-hours of one-hour training
 The matched-token pair (Section~\ref{sec:xlxxl}) uses a step budget of 35{,}000
 updates instead of the clock and, with the reduced-rate one-hour run, adds about
 2.5 slice-hours on the same MIG slice. Four extra runs (Section~\ref{sec:extensions})
-add 2.5 hours on a GPU with a different label, and we treat them separately. Pilot
+add 2.5 hours on a GPU with a different label, and are treated separately. Pilot
 runs and all offline scoring are not in the budget.
 
 \textbf{Initialisation.} All models start from random weights with the nanoGPT
-initialisation~\cite{nanogpt}. We do not use pretrained weights or embeddings. The
+initialisation~\cite{nanogpt}. No pretrained weights or embeddings are used. The
 only external component is the GPT-2 tokenizer, which the project rules allow.
 
-\textbf{Evaluation objective.} We measure cross-entropy (CE, nats per token) on
+\textbf{Evaluation objective.} The metric is cross-entropy (CE, nats per token) on
 held-out TinyStories text. It is the quantity the model is trained on, so it reads
-language-modelling quality directly. We also report perplexity, $\exp(\text{CE})$,
-and bits per byte for the test set, because per-token numbers cannot be compared
-with groups that use another tokenizer. These metrics say how well the model
-predicts the next token. They do not say if a generated story is coherent, so we
-also read samples (Section~\ref{sec:test}), without scoring them.
+language-modelling quality directly. Perplexity, $\exp(\text{CE})$, and bits per
+byte are also reported for the test set, because per-token numbers cannot be
+compared with groups that use another tokenizer. These metrics say how well the
+model predicts the next token. They do not say if a generated story is coherent, so
+samples are also read (Section~\ref{sec:test}), without scoring them.
 
 \section{Research question and background}
-Our question is practical: \emph{with one hour on a fixed GPU, which model size
+The question is practical: \emph{with one hour on a fixed GPU, which model size
 predicts held-out text best, and does it matter how much training data is
 available?}
 
@@ -106,31 +106,32 @@ with a fixed amount of compute the best choice is a large model that stops well
 before convergence. Hoffmann et al.~\cite{hoffmann2022} correct the balance: model
 size and training tokens should grow together, at about 20 tokens per parameter.
 Both results are for much larger models and data, and their budget is FLOPs, not
-time. Two sources are closer to our setting. Geiping and
+time. Two sources are closer to this setting. Geiping and
 Goldstein~\cite{geiping2023} train a language model for one day on one GPU and
 report that the loss per gradient step falls faster for models with more
 parameters, but those models are slower, so the two effects almost cancel out.
 An informal experiment with five minutes on a laptop~\cite{goedecke}, also on
 TinyStories, finds the best size near 2M parameters, close to the 20 tokens per
-parameter rule. So the literature gives two predictions for our hour that do not
+parameter rule. So the literature gives two predictions for one hour that do not
 agree: ``as large as possible, stop early''~\cite{kaplan2020} or ``about one
-parameter for every 20 tokens''~\cite{hoffmann2022}. We measure which one is closer.
+parameter for every 20 tokens''~\cite{hoffmann2022}. This report measures which one
+is closer.
 
 For the data axis, the reference is Muennighoff et al.~\cite{muennighoff2023}:
 they report that repeating data for up to about four epochs costs almost nothing.
-Our small models repeat the 25\% subset about eight times, so we go a bit further
-than their range.
+The small models here repeat the 25\% subset about eight times, a bit beyond that
+range.
 
-We chose TinyStories~\cite{tinystories2023} because it was built for small models:
-models with a few million parameters already write simple, mostly correct stories.
-Differences between our configurations should then be visible in one hour.
+TinyStories~\cite{tinystories2023} was chosen because it was built for small
+models: models with a few million parameters already write simple, mostly correct
+stories. Differences between the configurations should then be visible in one hour.
 
 \section{Experimental setup}
 \textbf{Data.} \texttt{roneneldan/TinyStories} from Hugging Face. The training
-split has 2,119,719 stories (473,992,236 tokens). We split the official validation
-set 80/20 at story level with seed 42, which gives 17,592 validation stories
+split has 2,119,719 stories (473,992,236 tokens). The official validation set is
+split 80/20 at story level with seed 42, which gives 17,592 validation stories
 (3,808,644 tokens) and 4,398 test stories (957,274 tokens). The 25/50/75\% subsets
-have about 118, 237 and 355 million tokens. We did not check the dataset for
+have about 118, 237 and 355 million tokens. The dataset was not checked for
 duplicated stories.
 
 \textbf{Tokenizer.} GPT-2 BPE from \texttt{tiktoken} (50,257 entries), with an
@@ -139,7 +140,7 @@ end-of-text token after each story. It is the same for all runs.
 \textbf{Model.} The nanoGPT decoder-only Transformer~\cite{nanogpt,vaswani2017}:
 causal attention, learned position embeddings, tied input and output embeddings,
 context length 256, dropout 0.1. Table~\ref{tab:sizes} lists the five sizes. Depth,
-width and number of heads change together, so we cannot separate their effects.
+width and number of heads change together, so their effects cannot be separated.
 
 \begin{table}[htbp]
   \centering\small
@@ -164,20 +165,18 @@ width and number of heads change together, so we cannot separate their effects.
 $3\times10^{-4}$, weight decay 0.1, betas (0.9, 0.95) and gradient clipping at 1.0.
 The schedule follows the clock and not the step count: a linear warmup during the
 first 2\% of the hour (72 seconds), then cosine decay to 10\% of the peak at the
-end. We did this because the budget is in time. A fast model and a slow model then
-finish at the same point of the schedule. Li et al.~\cite{li2020budgeted} call
-this a budget-aware schedule and show that it matters a lot when the budget is
-short. A run that is cut in the middle of a cosine decay looks worse than it
-is~\cite{hagele2024}. Training
-windows are sampled with replacement from the token stream. The recipe is the same
-for all sizes. We did not tune the learning rate for each size, and we come back to
-this in Section~\ref{sec:discussion}.
+end. The budget is in time, so this choice keeps a fast model and a slow model at
+the same point of the schedule. Li et al.~\cite{li2020budgeted} call this a
+budget-aware schedule and show that it matters a lot when the budget is short. A
+run that is cut in the middle of a cosine decay looks worse than it
+is~\cite{hagele2024}. Training windows are sampled with replacement from the token
+stream. The recipe is the same for all sizes. The learning rate was not tuned for
+each size; Section~\ref{sec:discussion} returns to this.
 
-\textbf{Validation and test.} During training we score a fixed sample of
-validation windows. The checkpoint at the end of the hour is the one we keep. We do
-not pick an earlier one. Model choices use validation only. The test set is scored
-offline with non-overlapping 256-token windows (957,184 tokens, the short tail is
-dropped).
+\textbf{Validation and test.} During training a fixed sample of validation windows
+is scored. The checkpoint at the end of the hour is kept; no earlier one is picked.
+Model choices use validation only. The test set is scored offline with
+non-overlapping 256-token windows (957,184 tokens, the short tail is dropped).
 
 \textbf{Sequence of experiments.} (1) A $5\times4$ comparison: five sizes, four
 data fractions, seed 42. (2) Because XL and XXL were very close, a check of the
@@ -187,7 +186,7 @@ seeds 42, 43 and 44. (4) A matched-token control: XL and XXL from fresh weights 
 the same 35,000 updates (143M tokens) with a step-based schedule, to separate
 throughput from capacity. (5) A reduced learning-rate run for XXL, and four
 exploratory runs with a shorter budget or a longer context. Steps 2 to 5 were
-decided after we saw step 1, so they are targeted follow-ups and not independent
+decided after step 1, so they are targeted follow-ups and not independent
 experiments.
 
 \section{Results}\label{sec:results}
@@ -202,8 +201,8 @@ is worth nothing, or slightly less than nothing.
 The data fraction matters much less. Inside each size, 100\% of the data is better
 than 25\% by 0.005 to 0.013 nats, and the fractions in the middle are not in a
 clear order (panel c). So more data seems to help a little, but with one seed per
-cell we cannot separate this from noise. What we can say is that using only a
-quarter of TinyStories costs at most about 0.01 nats in this setting.
+cell this cannot be separated from noise. Using only a quarter of TinyStories costs
+at most about 0.01 nats in this setting.
 
 \begin{figure}[tbp]
   \centering
@@ -221,24 +220,24 @@ factor of 6.9 from Small to XXL. In units of the full training set (474M tokens)
 Small sees it 2.08 times, Medium 1.55, Large 1.19, XL 0.59 and XXL 0.30 times. XXL
 would need about 3 hours and 18 minutes to see the full data once.
 
-This also corrects an explanation we had in an early draft, that the data fraction
+This also corrects an explanation from an early draft, that the data fraction
 does not matter because no run finishes one pass. That is wrong for most of the
 grid: 15 of the 20 runs process more tokens than their training subset has, and
 Small with 25\% of the data goes through its subset 8.2 times. Its loss is still
 only 0.007 nats worse than Small with all the data. This agrees with Muennighoff
-et al.~\cite{muennighoff2023}, and in our case it holds up to eight repetitions. A
-note of care: we sample windows with replacement, so ``8.2 times'' counts processed
-tokens, it does not mean every story was seen eight times. We also checked that the
-token counters in all 262,432 log rows are equal to steps $\times$ 4096.
+et al.~\cite{muennighoff2023}, and here it holds up to eight repetitions. A note of
+care: windows are sampled with replacement, so ``8.2 times'' counts processed
+tokens, it does not mean every story was seen eight times. The token counters in
+all 262,432 log rows were also checked to equal steps $\times$ 4096.
 
 \subsection{Is XL really better than XXL?}\label{sec:xlxxl}
 The gap between XL and XXL in the first comparison is 0.004 nats, with one seed.
-There was a second problem, which we found late. The validation sample during
-training was 16 microbatches, and the microbatch size depends on the model. So
-Small, Medium and Large were scored on 65,536 tokens, XL on 32,768 and XXL on
-16,384. A gap of 0.004 measured like this means very little. We did two checks.
+There was a second problem, found late. The validation sample during training was
+16 microbatches, and the microbatch size depends on the model. So Small, Medium and
+Large were scored on 65,536 tokens, XL on 32,768 and XXL on 16,384. A gap of 0.004
+measured like this means very little. Two checks follow.
 
-\textbf{Same validation data.} We scored four saved checkpoints on the complete
+\textbf{Same validation data.} Four saved checkpoints were scored on the complete
 validation set (3,808,643 tokens each). Table~\ref{tab:common} shows that the gap
 between XL and XXL grows to 0.034 nats, and XL stays ahead. The order of the two
 XL runs changes: with the complete set, 100\% of the data is 0.002 better than
@@ -262,20 +261,20 @@ XXL, 100\%   & 1.5106 & 1.5236 & 4.589 \\
 \end{tabular}
 \end{table}
 
-\textbf{Three seeds.} We trained XL and XXL again on the full data with seeds 42,
-43 and 44, with the same recipe and the same GPU label, and scored the final
-checkpoints on the complete validation set (Table~\ref{tab:seeds},
+\textbf{Three seeds.} XL and XXL were trained again on the full data with seeds 42,
+43 and 44, using the same recipe and the same GPU label, and the final checkpoints
+were scored on the complete validation set (Table~\ref{tab:seeds},
 Figure~\ref{fig:seeds}). XL is better in every pair, and every XL run is better
 than every XXL run. The mean CE is 1.4947 for XL (standard deviation 0.0038) and
 1.5244 for XXL (0.0098). The mean paired gap is 0.030 nats, which is about 2.9\%
 in perplexity (4.458 against 4.592).
 
-We do not want to oversell this. With three pairs, a paired $t$ interval at 95\%
-is $[-0.002,\ 0.061]$, so it includes zero, and three points cannot tell us if the
-normal assumption is reasonable. What we have is the same direction three times
-and a gap about eight times larger than the spread between XL seeds. We think this
-is enough to say that XL is the better choice for one hour with this recipe. It is
-not a significance test.
+This should not be oversold. With three pairs, a paired $t$ interval at 95\%
+is $[-0.002,\ 0.061]$, so it includes zero, and three points cannot tell whether the
+normal assumption is reasonable. What stands is the same direction three times and a
+gap about eight times larger than the spread between XL seeds. That is enough to
+call XL the better choice for one hour with this recipe. It is not a significance
+test.
 
 \begin{table}[htbp]
 \centering\small
@@ -318,52 +317,50 @@ capacity. One reading of the curves is confounded, though: the schedule follows 
 clock, so at 120M tokens XL is still at a high learning rate and XXL is near the end
 of its decay, and part of the gap in that panel can come from this.
 
-\textbf{Matched-token control.} To remove this confound we trained XL and XXL from
-fresh weights for the same 35,000 updates (143,360,000 tokens each), with a
+\textbf{Matched-token control.} To remove this confound, XL and XXL were trained
+from fresh weights for the same 35,000 updates (143,360,000 tokens each), with a
 step-based cosine schedule, the same peak learning rate, seed 42 and the same MIG
 slice. At equal tokens the ranking flips: XXL reaches complete-validation CE 1.521
 against 1.574 for XL, a gap of 0.053 nats (5.2\% in perplexity) in XXL's favour.
 XXL needed 62 minutes for these tokens and XL only 31. So, with the clock confound
 removed, the extra capacity of XXL does help per token, and it loses in one hour
-only because it processes 1.93 times fewer tokens. This is one seeded pair, so we
-weight the direction more than the exact size of the gap.
+only because it processes 1.93 times fewer tokens. This is one seeded pair, so the
+direction carries more weight than the exact size of the gap.
 
 \subsection{Shorter budget and longer context (exploratory)}\label{sec:extensions}
-We ran four more runs with seed 42 and the full data. With a 30-minute budget,
-Large has the lowest validation CE (1.580), then XL (1.633) and XXL (1.680). With
-one hour XL is first. So the best size moves up when the budget grows, which is
-what the token argument predicts. In the fourth run, XL with context 512 reaches
-1.456 against 1.507 for context 256, and it processes fewer tokens (190M against
-280M).
+Four more runs used seed 42 and the full data. With a 30-minute budget, Large has
+the lowest validation CE (1.580), then XL (1.633) and XXL (1.680). With one hour XL
+is first. So the best size moves up when the budget grows, which is what the token
+argument predicts. In the fourth run, XL with context 512 reaches 1.456 against
+1.507 for context 256, and it processes fewer tokens (190M against 280M).
 
-We report these as leads and not as results. The four runs were recorded on a GPU
-labelled \texttt{H100 NVL}, without the MIG slice, and the throughput is not
-consistent with the main runs (Large was faster than before, XL slower). The
-context-512 run also doubles the tokens per update, from 4096 to 8192. With these
-differences we cannot say how much of each change comes from the budget or from the
-context.
+These are leads, not results. The four runs were recorded on a GPU labelled
+\texttt{H100 NVL}, without the MIG slice, and the throughput is not consistent with
+the main runs (Large was faster than before, XL slower). The context-512 run also
+doubles the tokens per update, from 4096 to 8192. With these differences it is
+unclear how much of each change comes from the budget or from the context.
 
 \subsection{Test results and generated stories}\label{sec:test}
 The model selected on validation in the first comparison is XL with 50\% of the
 data. Its test CE is 1.4846, the perplexity is 4.41 and it has 0.524 bits per
 byte. The test results of all 20 runs are in Table~\ref{tab:all}, and the order of
 the sizes is the same as on validation: Small 6.26, Medium 5.16, Large 4.66, XL
-4.40 and XXL 4.56 in perplexity for the full-data runs. We have to be clear about
-one thing. We scored all 20 checkpoints on the test set at the same time, so the
-test set was seen before the follow-up decisions. For this reason the repeated
-runs are compared on validation only, and we have no test scores for them.
+4.40 and XXL 4.56 in perplexity for the full-data runs. One caveat: all 20
+checkpoints were scored on the test set at the same time, so the test set was seen
+before the follow-up decisions. For this reason the repeated runs are compared on
+validation only, with no test scores.
 
-We also generated five stories per model with fixed prompts (temperature 0.8,
+Five stories per model were also generated with fixed prompts (temperature 0.8,
 top-$k$ 40, 150 new tokens). All models write fluent text in the TinyStories
 style, and all of them make errors that the loss does not show. For the prompt
 ``Tom had a big red ball.'', Small changes the name to Tim, XL has a girl who says
 to Tom ``I want to pet you'', and in the XXL story Sam says ``I'm Sam. I'm Tom.''
-Five prompts with one sample each cannot rank the models, so we do not claim that
+Five prompts with one sample each cannot rank the models, so no claim follows that
 the lower loss of XL gives better stories.
 
 \section{Discussion and limitations}\label{sec:discussion}
 The first comparison, the scoring on the complete validation set and the repeated
-runs agree: for one hour on this GPU slice with our recipe, the 124M model is the
+runs agree: for one hour on this GPU slice with this recipe, the 124M model is the
 best of the five. The main trade-off is throughput against capacity. A bigger
 model uses each token better but gets fewer of them, and at one hour the balance
 is near 124M parameters. The matched-token control makes this explicit: at equal
@@ -371,34 +368,33 @@ tokens the larger model is ahead, so the one-hour result is about time, not a
 ceiling on what XXL can learn. The 30-minute runs point the same way, with the
 balance at a smaller model.
 
-Compared with the literature, our best model is far from the rule of
+Compared with the literature, the best model here is far from the rule of
 Hoffmann et al.: XL sees 280M tokens for 124M parameters, about 2.3 tokens per
 parameter and not 20. Large (11 tokens per parameter) and Medium (24) are closer
-to the rule and they are clearly worse. Our result looks more like the picture of
+to the rule and they are clearly worse. The result looks more like the picture of
 Kaplan et al., a big model stopped early, up to the point where the model is so
-slow that it sees less than a third of the data (XXL). We are not sure why the
-ratio is so low. TinyStories is simple and repetitive, and 39M of the XL
-parameters are the embedding table, so both things can play a role. The
-laptop experiment~\cite{goedecke} was close to the rule with a five-minute budget,
-so the ratio may also depend on the budget. One more choice may hurt our large
-models: we train with dropout 0.1, and Geiping and Goldstein~\cite{geiping2023}
-turn dropout off in their budget setting because it reduces the number of
-effective updates. XL and XXL see less than one pass of the data, so dropout is
-probably not needed for them. We did not test this.
+slow that it sees less than a third of the data (XXL). Why the ratio is so low is
+unclear. TinyStories is simple and repetitive, and 39M of the XL parameters are the
+embedding table, so both things can play a role. The laptop
+experiment~\cite{goedecke} was close to the rule with a five-minute budget, so the
+ratio may also depend on the budget. One more choice may hurt the large models:
+training uses dropout 0.1, while Geiping and Goldstein~\cite{geiping2023} turn
+dropout off in their budget setting because it reduces the number of effective
+updates. XL and XXL see less than one pass of the data, so dropout is probably not
+needed for them, though this was not tested.
 
-The limits are these. First, we used one learning rate for all sizes. Wortsman
+The limits are these. First, one learning rate was used for all sizes. Wortsman
 et al.~\cite{wortsman2024} show that the loss becomes more sensitive to the
-learning rate when the model grows, so we also trained XXL for one hour with half
+learning rate when the model grows, so XXL was also trained for one hour at half
 the peak rate ($1.5\times10^{-4}$); it did not help, with complete-validation CE
 rising to 1.546 from 1.530 at the default. One value is not a search, so XXL may
 still be at a disadvantage that is not about time. Second, three seeds are few, and
-the finalists were chosen after we saw the first results. Third, we measure
-wall-clock time on a shared GPU slice, and the speed changed by up to 10\% between
-runs of the same model. Fourth, the data fraction results have one seed and
-differences of 0.01 nats, so we can only say the effect is small. Fifth, the
-sampled validation during training used fewer tokens for the bigger models. We only
-found this after the first comparison, and it is the reason why we scored the
-checkpoints again.
+the finalists were chosen after the first results were seen. Third, wall-clock time
+is measured on a shared GPU slice, and the speed changed by up to 10\% between runs
+of the same model. Fourth, the data fraction results have one seed and differences
+of 0.01 nats, so the effect can only be called small. Fifth, the sampled validation
+during training used fewer tokens for the bigger models. This surfaced only after
+the first comparison, and it is why the checkpoints were scored again.
 
 About reproducibility: configurations, logs and score tables for all runs are in
 the repository. All 26 checkpoints (the 20 original runs and the 6 repeated runs)
@@ -406,13 +402,14 @@ are in the Hugging Face repository \texttt{dsa4212-tinystories/tinystories-nanog
 together with the protocol files of the offline scorer, the per-story scores and
 the paired comparisons (\texttt{analysis/followups/}). The offline scoring uses
 \texttt{float32}, non-overlapping 256-token windows with the context reset in each
-window, and it ran on a GPU labelled \texttt{H100 NVL}. We did not rerun the
-scoring from the uploaded checkpoints for this report.
+window, and it ran on a GPU labelled \texttt{H100 NVL}. The scoring was not rerun
+from the uploaded checkpoints for this report.
 
-The experiments we would do next build on the matched-token control: repeat it over
-several seeds, and give XXL a proper per-size learning-rate search instead of the
-single reduced rate we tried. A longer wall-clock budget would then show whether XXL
-overtakes XL on the clock, which our token accounting predicts but does not prove.
+The natural next experiments build on the matched-token control: repeating it over
+several seeds, and giving XXL a proper per-size learning-rate search rather than the
+single reduced rate tried here. A longer wall-clock budget would then show whether
+XXL overtakes XL on the clock, which the token accounting predicts but does not
+prove.
 
 \section{Conclusion}
 With one hour per run, the best model is not the biggest one. XL (124M) beats XXL
