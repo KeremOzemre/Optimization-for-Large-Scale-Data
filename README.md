@@ -122,3 +122,13 @@ DSA4212 Optimisation for Large-Scale Data-Driven Inference, National University 
 | Tonio Kowalke | A0350429E |
 | Steffany Lara | A0350565H |
 | Ahmed Haj Hassine | A0342398U |
+
+## Use of AI tools
+
+We used Claude (Anthropic) as a review assistant, asking it to cross-check a draft of the report against the assessment rubric and the assignment requirements and to flag errors, omissions, and points worth clarifying. The authors verified every suggestion against the code and results and understand all submitted material; the model generated no experimental results. Acting on its review, we tested and incorporated the following changes to make the account more complete and honest:
+
+- Documented the evaluation protocol more fully (common-validation counts, scoring windows, checkpoint manifest) and stated which provenance details remain unpinned.
+- Tempered the statistical claim: with three seed pairs the paired *t* interval includes zero, so we report a repeatable direction, not significance.
+- Made the depth/width/head and per-family learning-rate confounds explicit (no per-size optimiser search was performed).
+- Separated the budget and context extensions as confounded variants that change several conditions at once.
+- Flagged that the ~2.9% perplexity gain has no measured translation into story quality, and that blind ratings remain pending.
