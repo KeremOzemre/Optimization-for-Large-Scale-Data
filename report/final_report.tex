@@ -2,6 +2,7 @@
 % Compile from report/: pdflatex report2; bibtex report2; pdflatex report2 twice.
 \documentclass[10pt,twocolumn,letterpaper]{article}
 \usepackage[T1]{fontenc}
+\input{glyphtounicode}\pdfgentounicode=1 % make fi/fl ligatures copy-paste and extract correctly
 \usepackage[margin=0.75in,columnsep=0.25in]{geometry}
 \IfFileExists{libertine.sty}{\usepackage{libertine}}{}
 \usepackage{amsmath,amssymb,booktabs,tabularx,array,graphicx}
