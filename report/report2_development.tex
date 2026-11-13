@@ -1,0 +1,32 @@
+\begin{table*}[t]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\caption{Nine retained pilot/development runs under differing settings. $L/d/H/T$ denotes layers/width/heads/context. Seconds measure loop time, targets count predictions, and CE is sampled validation. These are pipeline checks rather than controlled family comparisons.}
+\label{tab:development2}
+\begin{tabular}{lcccrrr}
+\toprule
+Run & $L/d/H/T$ & Device & Precision & Seconds & Targets & Final CE\\
+\midrule
+\texttt{pilot} & 4/256/4/256 & H100 MIG & bf16 & 120.010 & 31,834,112 & 2.421298\\
+\texttt{fresh-prep-check} & 1/64/4/32 & MPS & fp32 & 0.421 & 64 & 10.794510\\
+\texttt{config-smoke} & 2/128/4/64 & MPS & fp32 & 3.004 & 26,624 & 8.143094\\
+\texttt{config-width-check} & 2/64/4/64 & MPS & fp32 & 0.240 & 256 & 10.816594\\
+\texttt{five-minute} & 4/256/4/256 & MPS & fp32 & 300.598 & 1,568,768 & 4.183026\\
+\texttt{smoke} & 2/128/4/64 & MPS & fp32 & 30.008 & 142,080 & 5.147076\\
+\texttt{smoke-default} & 4/256/4/256 & MPS & fp32 & 1.840 & 4,096 & 10.629810\\
+\texttt{smoke-periodic} & 1/64/4/32 & MPS & fp32 & 2.036 & 2,048 & 10.819857\\
+\texttt{width512} & 4/512/4/256 & MPS & fp32 & 360.455 & 958,464 & 3.990984\\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\begin{minipage}{\textwidth}
+\footnotesize
+Pilot: 25\% training pool; width512: full cache. Fresh-prep-check uses
+50/20/20 training/validation/test stories; other local runs reference 2,000/200/200,
+although some legacy configurations record only cache paths. Local dropout is 0;
+pilot dropout is 0.1. MPS is Apple's GPU backend. Records are under
+\path{runs/pilot/}, \path{out/width512/}, and \path{out/old/}. Finishing an update
+can exceed very short time limits.
+\end{minipage}
+\end{table*}

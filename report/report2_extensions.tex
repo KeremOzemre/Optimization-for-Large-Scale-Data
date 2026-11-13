@@ -1,0 +1,21 @@
+\begin{table*}[t]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\caption{Budget/context extensions and one-hour full-data references (seed 42, dropout 0.1, bfloat16). Hardware labels differ: H100 NVL versus MIG 3g.47gb. Test values are rounded sampled exports with an unsaved exact protocol; dashes indicate no corresponding sampled export.}
+\label{tab:extensions2}
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Run & Minutes & Context & Targets/update & Targets (M) & Val. CE & Test CE & Test PPL & Test targets\\
+\midrule
+large\_t1800 & 30.0 & 256 & 4,096 & 366.367 & 1.580347 & 1.5504 & 4.71 & 65,536\\
+xl\_t1800 & 30.0 & 256 & 4,096 & 110.592 & 1.633249 & 1.5942 & 4.92 & 32,768\\
+xxl\_t1800 & 30.0 & 256 & 4,096 & 57.639 & 1.679670 & 1.6987 & 5.47 & 16,384\\
+xl\_ctx512 & 60.0 & 512 & 8,192 & 190.112 & 1.455457 & 1.4606 & 4.31 & 32,768\\
+\midrule
+\multicolumn{9}{l}{\textit{Original full-data one-hour references (different recorded MIG allocation):}}\\
+large\_data100 & 60.0 & 256 & 4,096 & 562.430 & 1.546009 & --- & --- & ---\\
+xl\_data100 & 60.0 & 256 & 4,096 & 279.831 & 1.506811 & --- & --- & ---\\
+xxl\_data100 & 60.0 & 256 & 4,096 & 143.655 & 1.510593 & --- & --- & ---\\
+\bottomrule
+\end{tabular}
+\end{table*}

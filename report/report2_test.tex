@@ -1,0 +1,18 @@
+\begin{table}[t]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\caption{Historical full-test endpoints: five full-data families and the original sampled-validation selection, XL/50\%. All score the same 957,184 target positions; these test results were already inspected. BPB uses decoded target-token bytes, including special-token representations.}
+\label{tab:test2}
+\begin{tabular}{lrrr}
+\toprule
+Checkpoint & Test CE & Test PPL & BPB\\
+\midrule
+Small / full & 1.833995 & 6.2588 & 0.647005\\
+Medium / full & 1.641483 & 5.1628 & 0.579090\\
+Large / full & 1.539026 & 4.6601 & 0.542945\\
+XL / full & 1.482373 & 4.4034 & 0.522958\\
+XXL / full & 1.517420 & 4.5604 & 0.535322\\
+XL / 50\% & 1.484568 & 4.4131 & 0.523732\\
+\bottomrule
+\end{tabular}
+\end{table}
